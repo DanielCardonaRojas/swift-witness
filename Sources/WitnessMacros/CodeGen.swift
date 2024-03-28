@@ -21,6 +21,41 @@ public enum WitnessGenerator {
       genericParameterClause: GenericParameterClauseSyntax(parameters: GenericParameterListSyntax(arrayLiteral: GenericParameterSyntax(name: TokenSyntax(stringLiteral: Self.genericLabel)))),
       memberBlock: MemberBlockSyntax(
         members: MemberBlockItemListSyntax(itemsBuilder: {
+          if let inheritedTypes = protocolDecl.inheritanceClause?.inheritedTypes {
+            for inheritedType in inheritedTypes {
+              if let identifierType = inheritedType.type.as(IdentifierTypeSyntax.self) {
+                MemberBlockItemSyntax(
+                  decl: VariableDeclSyntax(
+                    bindingSpecifier: .keyword(.let),
+                    bindings: PatternBindingListSyntax(
+                      itemsBuilder: {
+                        PatternBindingListSyntax.Element(
+                          pattern: IdentifierPatternSyntax(
+                            identifier: "\(raw: identifierType.name.text.lowercaseFirst())"
+                          ),
+                          typeAnnotation: TypeAnnotationSyntax(
+                            type: IdentifierTypeSyntax(
+                              name: "\(raw: identifierType.name.text)Witness",
+                              genericArgumentClause: GenericArgumentClauseSyntax(
+                                arguments: GenericArgumentListSyntax(
+                                  arrayLiteral: GenericArgumentSyntax(
+                                    argument: IdentifierTypeSyntax(
+                                      name: TokenSyntax(stringLiteral: Self.genericLabel)
+                                    )
+                                  )
+                                )
+                              )
+                            )
+                          )
+                        )
+                      }
+                    )
+                  )
+                )
+              }
+            }
+          }
+
           for member in protocolDecl.memberBlock.members {
             if let functionDecl = member.decl.as(FunctionDeclSyntax.self) {
               MemberBlockItemSyntax(decl: processProtocolRequirement(functionDecl))
@@ -39,7 +74,7 @@ public enum WitnessGenerator {
 
   static private func processProtocolRequirement(_ functionDecl: FunctionDeclSyntax) -> VariableDeclSyntax {
     VariableDeclSyntax(
-      bindingSpecifier: TokenSyntax(stringLiteral: "let"),
+      bindingSpecifier: .keyword(.let),
       bindings: PatternBindingListSyntax(
         itemsBuilder: {
           PatternBindingListSyntax.Element(
@@ -96,4 +131,18 @@ public enum WitnessGenerator {
 
     return typeSyntax
   }
+}
+
+extension String {
+    func lowercaseFirst() -> String {
+        guard let firstLetter = self.first else { return self }
+
+        // Check if the first letter is already lowercase
+        if firstLetter.isLowercase {
+            return self
+        }
+
+        // Convert the first letter to lowercase and concatenate with the rest of the string
+        return firstLetter.lowercased() + self.dropFirst()
+    }
 }
