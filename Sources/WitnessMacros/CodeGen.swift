@@ -25,32 +25,7 @@ public enum WitnessGenerator {
             for inheritedType in inheritedTypes {
               if let identifierType = inheritedType.type.as(IdentifierTypeSyntax.self) {
                 MemberBlockItemSyntax(
-                  decl: VariableDeclSyntax(
-                    bindingSpecifier: .keyword(.let),
-                    bindings: PatternBindingListSyntax(
-                      itemsBuilder: {
-                        PatternBindingListSyntax.Element(
-                          pattern: IdentifierPatternSyntax(
-                            identifier: "\(raw: identifierType.name.text.lowercaseFirst())"
-                          ),
-                          typeAnnotation: TypeAnnotationSyntax(
-                            type: IdentifierTypeSyntax(
-                              name: "\(raw: identifierType.name.text)Witness",
-                              genericArgumentClause: GenericArgumentClauseSyntax(
-                                arguments: GenericArgumentListSyntax(
-                                  arrayLiteral: GenericArgumentSyntax(
-                                    argument: IdentifierTypeSyntax(
-                                      name: TokenSyntax(stringLiteral: Self.genericLabel)
-                                    )
-                                  )
-                                )
-                              )
-                            )
-                          )
-                        )
-                      }
-                    )
-                  )
+                  decl: witnessVariableDecl(identifierType.name.text)
                 )
               }
             }
@@ -69,7 +44,40 @@ public enum WitnessGenerator {
       DeclSyntax(structDecl)
     ]
   }
-  
+
+  static private func witnessVariableDecl(_ name: String) -> VariableDeclSyntax {
+    VariableDeclSyntax(
+      bindingSpecifier: .keyword(.let),
+      bindings: PatternBindingListSyntax(
+        itemsBuilder: {
+          PatternBindingListSyntax.Element(
+            pattern: IdentifierPatternSyntax(
+              identifier: "\(raw: name.lowercaseFirst())"
+            ),
+            typeAnnotation: witnessTypeNamed(name)
+          )
+        }
+      )
+    )
+  }
+
+  static private func witnessTypeNamed(_ name: String) -> TypeAnnotationSyntax {
+    TypeAnnotationSyntax(
+      type: IdentifierTypeSyntax(
+        name: "\(raw: name)Witness",
+        genericArgumentClause: GenericArgumentClauseSyntax(
+          arguments: GenericArgumentListSyntax(
+            arrayLiteral: GenericArgumentSyntax(
+              argument: IdentifierTypeSyntax(
+                name: TokenSyntax(stringLiteral: Self.genericLabel)
+              )
+            )
+          )
+        )
+      )
+    )
+  }
+
   static private func processProtocolRequirement(_ decl: DeclSyntax) -> MemberBlockItemSyntax? {
     if let functionDecl = decl.as(FunctionDeclSyntax.self) {
       return MemberBlockItemSyntax(
@@ -104,6 +112,15 @@ public enum WitnessGenerator {
           )
         )
       )
+    } else if let associatedTypeDecl = decl.as(AssociatedTypeDeclSyntax.self) {
+
+      for inheritedType in associatedTypeDecl.inheritanceClause?.inheritedTypes ?? [] {
+        guard let identifierType = inheritedType.type.as(IdentifierTypeSyntax.self) else {
+          continue
+        }
+
+        return MemberBlockItemSyntax(decl: witnessVariableDecl(identifierType.name.text))
+      }
     }
 
     return nil
@@ -193,6 +210,8 @@ public enum WitnessGenerator {
 
       for parameter in nonPrimary {
         parameter
+          .with(\.inheritedType, nil)
+          .with(\.colon, nil)
       }
     })
 
