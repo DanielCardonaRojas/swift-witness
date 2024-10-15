@@ -16,6 +16,13 @@ public enum WitnessGenerator {
   static let genericLabel = "A"
 
   public static func processProtocol(protocolDecl: ProtocolDeclSyntax) throws -> [DeclSyntax] {
+    let convertedProtocolRequirements: [MemberBlockItemSyntax] = protocolDecl.memberBlock.members.compactMap { member in
+      if let member = processProtocolRequirement(member.decl) {
+        return member
+      }
+      return nil
+    }
+
     let structDecl = StructDeclSyntax(
       name: "\(raw: protocolDecl.name.text)Witness",
       genericParameterClause: genericParameterClause(protocolDecl),
@@ -31,10 +38,8 @@ public enum WitnessGenerator {
             }
           }
 
-          for member in protocolDecl.memberBlock.members {
-            if let member = processProtocolRequirement(member.decl) {
-              member
-            }
+          for member in convertedProtocolRequirements {
+            member
           }
         })
       )
