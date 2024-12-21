@@ -16,10 +16,21 @@ final class WitnessTests: XCTestCase {
         #if canImport(WitnessMacros)
         assertMacroExpansion(
             """
-            #stringify(a + b)
+            @Witness()
+            protocol Convertible {
+              associatedtype To
+              func convert() -> To
+            }
             """,
             expandedSource: """
-            (a + b, "a + b")
+            protocol Convertible {
+              associatedtype To
+              func convert() -> To
+            }
+
+            struct ConvertibleWitness<A, To> {
+                let convert: (A) -> To
+            }
             """,
             macros: testMacros
         )
