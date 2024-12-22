@@ -50,6 +50,31 @@ public enum WitnessGenerator {
     ]
   }
 
+  static func containsOption(_ option: String, protocolDecl: ProtocolDeclSyntax) -> Bool {
+    let attribute = protocolDecl.attributes.first(where: { attribute in
+      guard let attr = attribute.as(AttributeSyntax.self) else {
+        return false
+      }
+
+      guard let arguments = attr.arguments?.as(LabeledExprListSyntax.self) else {
+        // No arguments or unexpected format
+        return false
+      }
+
+      let hasConformance = arguments.contains(where: { element in
+        element.expression.description.contains(option)
+      })
+
+      return hasConformance
+    })
+
+    return attribute != nil
+  }
+
+  static func witnessStructName(_ protocolDecl: ProtocolDeclSyntax) -> TokenSyntax {
+    "\(raw: protocolDecl.name.text)Witness"
+  }
+
   static private func witnessVariableDecl(_ name: String) -> VariableDeclSyntax {
     VariableDeclSyntax(
       bindingSpecifier: .keyword(.let),
