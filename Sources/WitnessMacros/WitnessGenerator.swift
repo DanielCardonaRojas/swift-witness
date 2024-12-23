@@ -16,13 +16,16 @@ public enum WitnessGenerator {
   static let genericLabel = "A"
 
   public static func processProtocol(protocolDecl: ProtocolDeclSyntax) throws -> [DeclSyntax] {
-    let variance = witnessStructVariance(protocolDecl)
     let convertedProtocolRequirements: [MemberBlockItemSyntax] = protocolDecl.memberBlock.members.compactMap { member in
       if let member = processProtocolRequirement(member.decl) {
         return member
       }
       return nil
     }
+
+    // 2) Create the extension(s) for map/pullback/iso
+    let variances = witnessStructVariance(protocolDecl)
+    let utilityExtensions = generateUtilityExtensions(protocolDecl, variances: variances)
 
     let structDecl = StructDeclSyntax(
       name: "\(raw: protocolDecl.name.text)Witness",
@@ -46,9 +49,12 @@ public enum WitnessGenerator {
       )
     )
 
-    return [
-      DeclSyntax(structDecl)
-    ]
+    var declarations = [DeclSyntax(structDecl)]
+
+    if containsOption("utilities", protocolDecl: protocolDecl) {
+      declarations += utilityExtensions
+    }
+    return declarations
   }
 
   static func containsOption(_ option: String, protocolDecl: ProtocolDeclSyntax) -> Bool {
@@ -123,6 +129,11 @@ public enum WitnessGenerator {
     }
 
     return Set(variances)
+  }
+
+  static private func transformedInstance(_ protocolDecl: ProtocolDeclSyntax) {
+
+
   }
 
   static private func processProtocolRequirement(_ decl: DeclSyntax) -> MemberBlockItemSyntax? {
@@ -295,6 +306,235 @@ public enum WitnessGenerator {
 
     return associatedTypes
   }
+  // MARK: Utility extensions
+  static private func generateUtilityExtensions(
+    _ protocolDecl: ProtocolDeclSyntax,
+    variances: Set<Variance>
+  ) -> [DeclSyntax] {
+
+    // The name of the witness struct we generated, e.g., `CombinableWitness`.
+    let witnessName = witnessStructName(protocolDecl) // e.g. "CombinableWitness"
+
+    // Collect extension members (the utility methods).
+    var members = [MemberBlockItemSyntax]()
+
+    // If we detect `.invariant` or a mix of covariant+contravariant, we typically want `iso`.
+    if variances.contains(.invariant) ||
+       (variances.contains(.contravariant) && variances.contains(.covariant)) {
+      members.append(MemberBlockItemSyntax(decl: isoMethodDecl(witnessName: witnessName)))
+    } else {
+      // If strictly contravariant => generate pullback
+      if variances.contains(.contravariant) {
+        members.append(MemberBlockItemSyntax(decl: pullbackMethodDecl(witnessName: witnessName)))
+      }
+      // If strictly covariant => generate map
+      if variances.contains(.covariant) {
+        members.append(MemberBlockItemSyntax(decl: mapMethodDecl(witnessName: witnessName)))
+      }
+    }
+
+    // If we ended up with no methods to generate, just return empty
+    if members.isEmpty {
+      return []
+    }
+
+    // Build the extension itself
+    let extensionDecl = ExtensionDeclSyntax(
+      extendedType: TypeSyntax(IdentifierTypeSyntax(name: witnessName)),
+      memberBlock: MemberBlockSyntax(
+        members: MemberBlockItemListSyntax(members)
+      )
+    )
+
+    return [DeclSyntax(extensionDecl)]
+  }
+
+  /// Generates a `pullback` method:
+  /// ```swift
+  /// extension <WitnessName> {
+  ///   func pullback<B>(_ f: @escaping (B) -> A) -> <WitnessName><B> {
+  ///     .init(combine: { b1, b2 in
+  ///       self.combine(f(b1), f(b2))
+  ///     })
+  ///   }
+  /// }
+  /// ```
+  static private func pullbackMethodDecl(witnessName: TokenSyntax) -> FunctionDeclSyntax {
+    // `func pullback<B>(_ f: @escaping (B) -> A) -> <WitnessName><B>`
+    FunctionDeclSyntax(
+      name: .identifier("pullback"),
+      genericParameterClause: GenericParameterClauseSyntax(
+        parameters: GenericParameterListSyntax {
+          GenericParameterSyntax(name: .identifier("B"))
+        }
+      ),
+      signature: FunctionSignatureSyntax(
+        parameterClause: FunctionParameterClauseSyntax {
+          FunctionParameterSyntax(
+            firstName: .identifier("f"),
+            colon: .colonToken(),
+            type: FunctionTypeSyntax(
+              parameters: TupleTypeElementListSyntax {
+                TupleTypeElementSyntax(
+                  type: IdentifierTypeSyntax(name: .identifier("B"))
+                )
+              },
+              returnClause: ReturnClauseSyntax(
+                type: IdentifierTypeSyntax(name: .identifier("A"))
+              )
+            ),
+            defaultValue: nil
+          )
+        },
+        returnClause: ReturnClauseSyntax(
+          type: TypeSyntax(
+            genericType(witnessName: witnessName, typeArg: "B")
+          )
+        )
+      )
+    ) {
+      // The function body
+      CodeBlockItemListSyntax {
+        // `return .init(combine: { b1, b2 in ... })`
+      }
+    }
+  }
+
+  /// Generates a `map` method:
+  /// ```swift
+  /// extension <WitnessName> {
+  ///   func map<B>(_ f: @escaping (A) -> B) -> <WitnessName><B> {
+  ///     .init(combine: { a1, a2 in
+  ///       let result = self.combine(a1, a2)
+  ///       return f(result)
+  ///     })
+  ///   }
+  /// }
+  /// ```
+  static private func mapMethodDecl(witnessName: TokenSyntax) -> FunctionDeclSyntax {
+    // `func map<B>(_ f: @escaping (A) -> B) -> <WitnessName><B>`
+    FunctionDeclSyntax(
+      name: .identifier("map"),
+      genericParameterClause: GenericParameterClauseSyntax(
+        parameters: GenericParameterListSyntax {
+          GenericParameterSyntax(name: .identifier("B"))
+        }
+      ),
+      signature: FunctionSignatureSyntax(
+        parameterClause: FunctionParameterClauseSyntax {
+          FunctionParameterSyntax(
+            firstName: .identifier("f"),
+            colon: .colonToken(),
+            type: FunctionTypeSyntax(
+              parameters: TupleTypeElementListSyntax {
+                TupleTypeElementSyntax(
+                  type: IdentifierTypeSyntax(name: .identifier("A"))
+                )
+              },
+              returnClause: ReturnClauseSyntax(
+                type: IdentifierTypeSyntax(name: .identifier("B"))
+              )
+            )
+          )
+        },
+        returnClause: ReturnClauseSyntax(
+          type: TypeSyntax(
+            genericType(witnessName: witnessName, typeArg: "B")
+          )
+        )
+      )
+    ) {
+      CodeBlockItemListSyntax {
+      }
+    }
+  }
+
+  /// Generates an `iso` method:
+  /// ```swift
+  /// extension <WitnessName> {
+  ///   func iso<B>(
+  ///     _ pullback: @escaping (B) -> A,
+  ///     map: @escaping (A) -> B
+  ///   ) -> <WitnessName><B> {
+  ///     .init(combine: { b1, b2 in
+  ///       let r = self.combine(pullback(b1), pullback(b2))
+  ///       return map(r)
+  ///     })
+  ///   }
+  /// }
+  /// ```
+  static private func isoMethodDecl(witnessName: TokenSyntax) -> FunctionDeclSyntax {
+    // `func iso<B>(_ pullback: @escaping (B) -> A, map: @escaping (A) -> B) -> <WitnessName><B>`
+    FunctionDeclSyntax(
+      name: .identifier("iso"),
+      genericParameterClause: GenericParameterClauseSyntax(
+        parameters: GenericParameterListSyntax {
+          GenericParameterSyntax(name: .identifier("B"))
+        }
+      ),
+      signature: FunctionSignatureSyntax(
+        parameterClause: FunctionParameterClauseSyntax {
+          // ( _ pullback: @escaping (B) -> A )
+          FunctionParameterSyntax(
+            firstName: .identifier("pullback"),
+            colon: .colonToken(),
+            type: FunctionTypeSyntax(
+              parameters: TupleTypeElementListSyntax {
+                TupleTypeElementSyntax(
+                  type: IdentifierTypeSyntax(name: .identifier("B"))
+                )
+              },
+              returnClause: ReturnClauseSyntax(
+                type: IdentifierTypeSyntax(name: .identifier("A"))
+              )
+            )
+          )
+          // ( map: @escaping (A) -> B )
+          FunctionParameterSyntax(
+            firstName: .identifier("map"),
+            colon: .colonToken(),
+            type: FunctionTypeSyntax(
+              parameters: TupleTypeElementListSyntax {
+                TupleTypeElementSyntax(
+                  type: IdentifierTypeSyntax(name: .identifier("A"))
+                )
+              },
+              returnClause: ReturnClauseSyntax(
+                type: IdentifierTypeSyntax(name: .identifier("B"))
+              )
+            )
+          )
+        },
+        returnClause: ReturnClauseSyntax(
+          type: TypeSyntax(
+            genericType(witnessName: witnessName, typeArg: "B")
+          )
+        )
+      )
+    ) {
+      CodeBlockItemListSyntax {
+      }
+    }
+  }
+
+
+
+
+  // MARK: Helpers
+
+  /// Helper to produce "<witnessName><B>"
+  private static func genericType(witnessName: TokenSyntax, typeArg: String) -> some TypeSyntaxProtocol {
+    return IdentifierTypeSyntax(
+      name: witnessName,
+      genericArgumentClause: GenericArgumentClauseSyntax(
+        arguments: GenericArgumentListSyntax {
+          GenericArgumentSyntax(argument: IdentifierTypeSyntax(name: .identifier(typeArg)))
+        }
+      )
+    )
+  }
+
+
 
   /// **Core method**: Determines the variance of a function signature by checking
   /// how the generic parameters are used in the function's parameter list (input)
