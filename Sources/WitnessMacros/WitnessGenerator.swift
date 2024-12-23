@@ -248,7 +248,9 @@ public enum WitnessGenerator {
     return GenericParameterClauseSyntax(parameters: parameters)
   }
   
-  static func associatedTypeToGenericParam(_ protocolDecl: ProtocolDeclSyntax, primary: Bool) -> [GenericParameterSyntax] {
+  /// Returns the a list of generic types that the witness struct should include.
+  ///  - Parameter primary: Nil if you want all generic types no matter if they are primary or not.
+  static func associatedTypeToGenericParam(_ protocolDecl: ProtocolDeclSyntax, primary: Bool?) -> [GenericParameterSyntax] {
     let primaryAssociatedTypeNames = protocolDecl.primaryAssociatedTypeClause?.primaryAssociatedTypes
 
     let associatedTypes: [GenericParameterSyntax] = protocolDecl.memberBlock.members
@@ -265,10 +267,12 @@ public enum WitnessGenerator {
         let genericParam = GenericParameterSyntax(name: associatedType.name,
                                                   colon: inheritedType != nil ? .colonToken() : nil,
                                                   inheritedType: inheritedType)
-        if primary {
+        if let primary, primary {
           return isPrimary ? genericParam : nil
-        } else {
+        } else if let primary, !primary {
           return isPrimary ? nil : genericParam
+        } else {
+          return genericParam
         }
       })
 
