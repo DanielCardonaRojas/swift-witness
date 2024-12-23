@@ -17,7 +17,6 @@ public enum WitnessGenerator {
 
   public static func processProtocol(protocolDecl: ProtocolDeclSyntax) throws -> [DeclSyntax] {
     let variance = witnessStructVariance(protocolDecl)
-    print(variance)
     let convertedProtocolRequirements: [MemberBlockItemSyntax] = protocolDecl.memberBlock.members.compactMap { member in
       if let member = processProtocolRequirement(member.decl) {
         return member
@@ -310,7 +309,8 @@ public enum WitnessGenerator {
       generics: [GenericParameterSyntax]
   ) -> Variance {
       // 1) Collect the declared generic names: e.g., ["T", "U", ...]
-      let declaredGenericNames = Set(generics.map { $0.name.text })
+      var declaredGenericNames = Set(generics.map { $0.name.text })
+      declaredGenericNames.insert("Self")
 
       // 2) Collect generics used in parameter types (input position).
       //    We'll iterate through every parameter and walk its type syntax.
