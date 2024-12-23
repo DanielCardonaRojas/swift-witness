@@ -1,5 +1,5 @@
 public enum WitnessOptions: String {
-  case conformance //add code to conform to the protocol and provide interoperability
+  case utilities // map, pullback or iso
 }
 
 @attached(peer, names: suffixed(Witness))
