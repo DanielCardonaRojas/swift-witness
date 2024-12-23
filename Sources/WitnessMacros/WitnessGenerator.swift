@@ -16,6 +16,8 @@ public enum WitnessGenerator {
   static let genericLabel = "A"
 
   public static func processProtocol(protocolDecl: ProtocolDeclSyntax) throws -> [DeclSyntax] {
+    let variance = witnessStructVariance(protocolDecl)
+    print(variance)
     let convertedProtocolRequirements: [MemberBlockItemSyntax] = protocolDecl.memberBlock.members.compactMap { member in
       if let member = processProtocolRequirement(member.decl) {
         return member
@@ -106,6 +108,22 @@ public enum WitnessGenerator {
         )
       )
     )
+  }
+
+  /// Determines if the generated witness struct need a pullback, map or iso method.
+  /// if the set contains a covariant and contravariant then an iso is required
+  /// if the set contains covariant and not contravariant then a map is required
+  /// if the set contains a contravariant and not a covariant then a pullback is required
+  static private func witnessStructVariance(_ protocolDecl: ProtocolDeclSyntax) -> Set<Variance> {
+    let generics = associatedTypeToGenericParam(protocolDecl, primary: nil)
+    let variances: [Variance] = protocolDecl.memberBlock.members.compactMap { member in
+      guard let functionDecl = member.decl.as(FunctionDeclSyntax.self) else {
+        return nil
+      }
+      return variance(functionSignature: functionDecl.signature, generics: generics)
+    }
+
+    return Set(variances)
   }
 
   static private func processProtocolRequirement(_ decl: DeclSyntax) -> MemberBlockItemSyntax? {
@@ -279,6 +297,58 @@ public enum WitnessGenerator {
     return associatedTypes
   }
 
+  /// **Core method**: Determines the variance of a function signature by checking
+  /// how the generic parameters are used in the function's parameter list (input)
+  /// and return type (output).
+  ///
+  /// - Parameters:
+  ///   - functionSignature: The syntax node describing the function signature.
+  ///   - generics: The generic parameters (e.g., `T`, `U`) declared on the function.
+  /// - Returns: A `Variance` value (`.contravariant`, `.covariant`, or `.invariant`).
+  private static func variance(
+      functionSignature: FunctionSignatureSyntax,
+      generics: [GenericParameterSyntax]
+  ) -> Variance {
+      // 1) Collect the declared generic names: e.g., ["T", "U", ...]
+      let declaredGenericNames = Set(generics.map { $0.name.text })
+
+      // 2) Collect generics used in parameter types (input position).
+      //    We'll iterate through every parameter and walk its type syntax.
+      var genericsInParams = Set<String>()
+      for param in functionSignature.parameterClause.parameters {
+          let paramType = param.type
+          let collector = GenericNameCollector(declaredGenerics: declaredGenericNames)
+          collector.walk(paramType)
+          genericsInParams.formUnion(collector.foundGenerics)
+      }
+
+      // 3) Collect generics used in the return type (output position).
+      var genericsInReturn = Set<String>()
+      if let returnClause = functionSignature.returnClause {
+          let returnType = returnClause.type
+          let collector = GenericNameCollector(declaredGenerics: declaredGenericNames)
+          collector.walk(returnType)
+          genericsInReturn.formUnion(collector.foundGenerics)
+      }
+
+      // 4) Apply simple variance logic:
+      //    - If any generic is in both input and output, => invariant
+      //    - If generics are only in parameters => contravariant
+      //    - If generics are only in return => covariant
+      //    - Otherwise (e.g., none used at all) => invariant
+      let intersection = genericsInParams.intersection(genericsInReturn)
+      if !intersection.isEmpty {
+          return .invariant
+      } else if !genericsInParams.isEmpty && genericsInReturn.isEmpty {
+          return .contravariant
+      } else if genericsInParams.isEmpty && !genericsInReturn.isEmpty {
+          return .covariant
+      } else {
+          // If no generics are found at all or any other fallback scenario:
+          return .invariant
+      }
+  }
+
 }
 
 extension String {
@@ -293,4 +363,31 @@ extension String {
         // Convert the first letter to lowercase and concatenate with the rest of the string
         return firstLetter.lowercased() + self.dropFirst()
     }
+}
+
+
+enum Variance: Equatable {
+  case contravariant
+  case covariant
+  case invariant
+}
+
+final class GenericNameCollector: SyntaxVisitor {
+  /// The set of all generic names (e.g., T, U, V) declared in the function.
+  private let declaredGenerics: Set<String>
+  /// Accumulates the generic names found in the visited syntax.
+  private(set) var foundGenerics = Set<String>()
+
+  init(declaredGenerics: Set<String>) {
+    self.declaredGenerics = declaredGenerics
+    super.init(viewMode: .sourceAccurate)
+  }
+
+  override func visit(_ node: IdentifierTypeSyntax) -> SyntaxVisitorContinueKind {
+    let name = node.name.text
+    if declaredGenerics.contains(name) {
+      foundGenerics.insert(name)
+    }
+    return .visitChildren
+  }
 }
