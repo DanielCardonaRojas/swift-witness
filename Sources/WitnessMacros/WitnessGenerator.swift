@@ -25,7 +25,7 @@ public enum WitnessGenerator {
 
     // 2) Create the extension(s) for map/pullback/iso
     let variances = witnessStructVariance(protocolDecl)
-    let utilityExtensions = generateUtilityExtensions(protocolDecl, variances: variances)
+    let utilityMethods = generateUtilityExtensions(protocolDecl, variances: variances)
 
     let structDecl = StructDeclSyntax(
       name: "\(raw: protocolDecl.name.text)Witness",
@@ -45,16 +45,18 @@ public enum WitnessGenerator {
           for member in convertedProtocolRequirements {
             member
           }
+
+          // Utilities
+          if containsOption("utilities", protocolDecl: protocolDecl) {
+            for utilityMethod in utilityMethods {
+              utilityMethod
+            }
+          }
         })
       )
     )
 
-    var declarations = [DeclSyntax(structDecl)]
-
-    if containsOption("utilities", protocolDecl: protocolDecl) {
-      declarations += utilityExtensions
-    }
-    return declarations
+    return [DeclSyntax(structDecl)]
   }
 
   static func containsOption(_ option: String, protocolDecl: ProtocolDeclSyntax) -> Bool {
@@ -224,7 +226,9 @@ public enum WitnessGenerator {
   static func inoutSelfTupleTypeElement() -> TupleTypeElementSyntax {
     TupleTypeElementSyntax(
       type: AttributedTypeSyntax(
-        specifier: .keyword(.inout),
+        specifiers: .init(itemsBuilder: {
+          .init(specifier: .keyword(.inout))
+        }),
         baseType: IdentifierTypeSyntax(
           name: TokenSyntax(stringLiteral: Self.genericLabel)
         )
@@ -305,7 +309,7 @@ public enum WitnessGenerator {
   static private func generateUtilityExtensions(
     _ protocolDecl: ProtocolDeclSyntax,
     variances: Set<Variance>
-  ) -> [DeclSyntax] {
+  ) -> [MemberBlockItemSyntax] {
 
     // The name of the witness struct we generated, e.g., `CombinableWitness`.
     let witnessName = witnessStructName(protocolDecl) // e.g. "CombinableWitness"
@@ -333,15 +337,7 @@ public enum WitnessGenerator {
       return []
     }
 
-    // Build the extension itself
-    let extensionDecl = ExtensionDeclSyntax(
-      extendedType: TypeSyntax(IdentifierTypeSyntax(name: witnessName)),
-      memberBlock: MemberBlockSyntax(
-        members: MemberBlockItemListSyntax(members)
-      )
-    )
-
-    return [DeclSyntax(extensionDecl)]
+    return members
   }
 
   /// Generates a `pullback` method:
@@ -473,29 +469,54 @@ public enum WitnessGenerator {
           FunctionParameterSyntax(
             firstName: .identifier("pullback"),
             colon: .colonToken(),
-            type: FunctionTypeSyntax(
-              parameters: TupleTypeElementListSyntax {
-                TupleTypeElementSyntax(
-                  type: IdentifierTypeSyntax(name: .identifier("B"))
+            type: AttributedTypeSyntax(
+              specifiers: .init(itemsBuilder: {
+
+              }),
+              attributes: .init(
+                itemsBuilder: {
+                  AttributeSyntax(
+                    atSign: .atSignToken(),
+                    attributeName: IdentifierTypeSyntax(name: .identifier("escaping"))
+                  )
+                }),
+              baseType:
+                FunctionTypeSyntax(
+                  parameters: TupleTypeElementListSyntax {
+                    TupleTypeElementSyntax(
+                      type: IdentifierTypeSyntax(name: .identifier("B"))
+                    )
+                  },
+                  returnClause: ReturnClauseSyntax(
+                    type: IdentifierTypeSyntax(name: .identifier("A"))
+                  )
                 )
-              },
-              returnClause: ReturnClauseSyntax(
-                type: IdentifierTypeSyntax(name: .identifier("A"))
-              )
             )
           )
           // ( map: @escaping (A) -> B )
           FunctionParameterSyntax(
             firstName: .identifier("map"),
             colon: .colonToken(),
-            type: FunctionTypeSyntax(
-              parameters: TupleTypeElementListSyntax {
-                TupleTypeElementSyntax(
-                  type: IdentifierTypeSyntax(name: .identifier("A"))
+            type: AttributedTypeSyntax(
+              specifiers: .init(itemsBuilder: {
+
+              }),
+              attributes: .init(
+                itemsBuilder: {
+                  AttributeSyntax(
+                    atSign: .atSignToken(),
+                    attributeName: IdentifierTypeSyntax(name: .identifier("escaping"))
+                  )
+                }),
+              baseType: FunctionTypeSyntax(
+                parameters: TupleTypeElementListSyntax {
+                  TupleTypeElementSyntax(
+                    type: IdentifierTypeSyntax(name: .identifier("A"))
+                  )
+                },
+                returnClause: ReturnClauseSyntax(
+                  type: IdentifierTypeSyntax(name: .identifier("B"))
                 )
-              },
-              returnClause: ReturnClauseSyntax(
-                type: IdentifierTypeSyntax(name: .identifier("B"))
               )
             )
           )
