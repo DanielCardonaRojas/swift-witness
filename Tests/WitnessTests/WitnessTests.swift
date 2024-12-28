@@ -12,6 +12,30 @@ let testMacros: [String: Macro.Type] = [
 #endif
 
 final class WitnessTests: XCTestCase {
+  func testContraVariantProtocol() throws {
+      #if canImport(WitnessMacros)
+      assertMacroExpansion(
+          """
+          @Witness()
+          protocol Comparable {
+            func compare(_ other: Self) -> Bool
+          }
+          """,
+          expandedSource: """
+          protocol Comparable {
+            func compare(_ other: Self) -> Bool
+          }
+          
+          struct ComparableWitness<A> {
+              let compare: (A, A) -> Bool
+          }
+          """,
+          macros: testMacros
+      )
+      #else
+      throw XCTSkip("macros are only supported when running tests for the host platform")
+      #endif
+  }
     func testMacro() throws {
         #if canImport(WitnessMacros)
         assertMacroExpansion(
