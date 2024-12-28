@@ -320,15 +320,15 @@ public enum WitnessGenerator {
     // If we detect `.invariant` or a mix of covariant+contravariant, we typically want `iso`.
     if variances.contains(.invariant) ||
        (variances.contains(.contravariant) && variances.contains(.covariant)) {
-      members.append(MemberBlockItemSyntax(decl: isoMethodDecl(protocolDecl: protocolDecl, witnessName: witnessName)))
+      members.append(MemberBlockItemSyntax(decl: transformedWitness(semantic: .iso, protocolDecl: protocolDecl, witnessName: witnessName)))
     } else {
       // If strictly contravariant => generate pullback
       if variances.contains(.contravariant) {
-        members.append(MemberBlockItemSyntax(decl: pullbackMethodDecl(witnessName: witnessName)))
+        members.append(MemberBlockItemSyntax(decl: transformedWitness(semantic: .pullback, protocolDecl: protocolDecl, witnessName: witnessName)))
       }
       // If strictly covariant => generate map
       if variances.contains(.covariant) {
-        members.append(MemberBlockItemSyntax(decl: mapMethodDecl(witnessName: witnessName)))
+        members.append(MemberBlockItemSyntax(decl: transformedWitness(semantic: .map, protocolDecl: protocolDecl, witnessName: witnessName)))
       }
     }
 
@@ -340,7 +340,7 @@ public enum WitnessGenerator {
     return members
   }
 
-  /// Generates a `pullback` method:
+  /// Generates method transforming witness to another type
   /// ```swift
   /// extension <WitnessName> {
   ///   func pullback<B>(_ f: @escaping (B) -> A) -> <WitnessName><B> {
@@ -350,48 +350,7 @@ public enum WitnessGenerator {
   ///   }
   /// }
   /// ```
-  static private func pullbackMethodDecl(witnessName: TokenSyntax) -> FunctionDeclSyntax {
-    // `func pullback<B>(_ f: @escaping (B) -> A) -> <WitnessName><B>`
-    FunctionDeclSyntax(
-      name: .identifier("pullback"),
-      genericParameterClause: GenericParameterClauseSyntax(
-        parameters: GenericParameterListSyntax {
-          GenericParameterSyntax(name: .identifier("B"))
-        }
-      ),
-      signature: FunctionSignatureSyntax(
-        parameterClause: FunctionParameterClauseSyntax {
-          FunctionParameterSyntax(
-            firstName: .identifier("f"),
-            colon: .colonToken(),
-            type: FunctionTypeSyntax(
-              parameters: TupleTypeElementListSyntax {
-                TupleTypeElementSyntax(
-                  type: IdentifierTypeSyntax(name: .identifier("B"))
-                )
-              },
-              returnClause: ReturnClauseSyntax(
-                type: IdentifierTypeSyntax(name: .identifier("A"))
-              )
-            ),
-            defaultValue: nil
-          )
-        },
-        returnClause: ReturnClauseSyntax(
-          type: TypeSyntax(
-            genericType(witnessName: witnessName, typeArg: "B")
-          )
-        )
-      )
-    ) {
-      // The function body
-      CodeBlockItemListSyntax {
-        // `return .init(combine: { b1, b2 in ... })`
-      }
-    }
-  }
-
-  /// Generates a `map` method:
+  /// or:
   /// ```swift
   /// extension <WitnessName> {
   ///   func map<B>(_ f: @escaping (A) -> B) -> <WitnessName><B> {
@@ -402,45 +361,7 @@ public enum WitnessGenerator {
   ///   }
   /// }
   /// ```
-  static private func mapMethodDecl(witnessName: TokenSyntax) -> FunctionDeclSyntax {
-    // `func map<B>(_ f: @escaping (A) -> B) -> <WitnessName><B>`
-    FunctionDeclSyntax(
-      name: .identifier("map"),
-      genericParameterClause: GenericParameterClauseSyntax(
-        parameters: GenericParameterListSyntax {
-          GenericParameterSyntax(name: .identifier("B"))
-        }
-      ),
-      signature: FunctionSignatureSyntax(
-        parameterClause: FunctionParameterClauseSyntax {
-          FunctionParameterSyntax(
-            firstName: .identifier("f"),
-            colon: .colonToken(),
-            type: FunctionTypeSyntax(
-              parameters: TupleTypeElementListSyntax {
-                TupleTypeElementSyntax(
-                  type: IdentifierTypeSyntax(name: .identifier("A"))
-                )
-              },
-              returnClause: ReturnClauseSyntax(
-                type: IdentifierTypeSyntax(name: .identifier("B"))
-              )
-            )
-          )
-        },
-        returnClause: ReturnClauseSyntax(
-          type: TypeSyntax(
-            genericType(witnessName: witnessName, typeArg: "B")
-          )
-        )
-      )
-    ) {
-      CodeBlockItemListSyntax {
-      }
-    }
-  }
-
-  /// Generates an `iso` method:
+  /// or:
   /// ```swift
   /// extension <WitnessName> {
   ///   func iso<B>(
@@ -454,10 +375,14 @@ public enum WitnessGenerator {
   ///   }
   /// }
   /// ```
-  static private func isoMethodDecl(protocolDecl: ProtocolDeclSyntax, witnessName: TokenSyntax) -> FunctionDeclSyntax {
+  static private func transformedWitness(
+    semantic: TransformedWitnessSemantic,
+    protocolDecl: ProtocolDeclSyntax,
+    witnessName: TokenSyntax
+  ) -> FunctionDeclSyntax {
     // `func iso<B>(_ pullback: @escaping (B) -> A, map: @escaping (A) -> B) -> <WitnessName><B>`
     FunctionDeclSyntax(
-      name: .identifier("iso"),
+      name: .identifier(semantic.rawValue),
       genericParameterClause: GenericParameterClauseSyntax(
         parameters: GenericParameterListSyntax {
           GenericParameterSyntax(name: .identifier("B"))
@@ -466,60 +391,64 @@ public enum WitnessGenerator {
       signature: FunctionSignatureSyntax(
         parameterClause: FunctionParameterClauseSyntax {
           // ( _ pullback: @escaping (B) -> A )
-          FunctionParameterSyntax(
-            firstName: .identifier("pullback"),
-            colon: .colonToken(),
-            type: AttributedTypeSyntax(
-              specifiers: .init(itemsBuilder: {
+          if semantic == .iso || semantic == .pullback {
+            FunctionParameterSyntax(
+              firstName: .identifier("pullback"),
+              colon: .colonToken(),
+              type: AttributedTypeSyntax(
+                specifiers: .init(itemsBuilder: {
 
-              }),
-              attributes: .init(
-                itemsBuilder: {
-                  AttributeSyntax(
-                    atSign: .atSignToken(),
-                    attributeName: IdentifierTypeSyntax(name: .identifier("escaping"))
-                  )
                 }),
-              baseType:
-                FunctionTypeSyntax(
+                attributes: .init(
+                  itemsBuilder: {
+                    AttributeSyntax(
+                      atSign: .atSignToken(),
+                      attributeName: IdentifierTypeSyntax(name: .identifier("escaping"))
+                    )
+                  }),
+                baseType:
+                  FunctionTypeSyntax(
+                    parameters: TupleTypeElementListSyntax {
+                      TupleTypeElementSyntax(
+                        type: IdentifierTypeSyntax(name: .identifier("B"))
+                      )
+                    },
+                    returnClause: ReturnClauseSyntax(
+                      type: IdentifierTypeSyntax(name: .identifier(genericLabel))
+                    )
+                  )
+              )
+            )
+          }
+          // ( map: @escaping (A) -> B )
+          if semantic == .iso || semantic == .map {
+            FunctionParameterSyntax(
+              firstName: .identifier("map"),
+              colon: .colonToken(),
+              type: AttributedTypeSyntax(
+                specifiers: .init(itemsBuilder: {
+
+                }),
+                attributes: .init(
+                  itemsBuilder: {
+                    AttributeSyntax(
+                      atSign: .atSignToken(),
+                      attributeName: IdentifierTypeSyntax(name: .identifier("escaping"))
+                    )
+                  }),
+                baseType: FunctionTypeSyntax(
                   parameters: TupleTypeElementListSyntax {
                     TupleTypeElementSyntax(
-                      type: IdentifierTypeSyntax(name: .identifier("B"))
+                      type: IdentifierTypeSyntax(name: .identifier(genericLabel))
                     )
                   },
                   returnClause: ReturnClauseSyntax(
-                    type: IdentifierTypeSyntax(name: .identifier("A"))
+                    type: IdentifierTypeSyntax(name: .identifier("B"))
                   )
-                )
-            )
-          )
-          // ( map: @escaping (A) -> B )
-          FunctionParameterSyntax(
-            firstName: .identifier("map"),
-            colon: .colonToken(),
-            type: AttributedTypeSyntax(
-              specifiers: .init(itemsBuilder: {
-
-              }),
-              attributes: .init(
-                itemsBuilder: {
-                  AttributeSyntax(
-                    atSign: .atSignToken(),
-                    attributeName: IdentifierTypeSyntax(name: .identifier("escaping"))
-                  )
-                }),
-              baseType: FunctionTypeSyntax(
-                parameters: TupleTypeElementListSyntax {
-                  TupleTypeElementSyntax(
-                    type: IdentifierTypeSyntax(name: .identifier("A"))
-                  )
-                },
-                returnClause: ReturnClauseSyntax(
-                  type: IdentifierTypeSyntax(name: .identifier("B"))
                 )
               )
             )
-          )
+          }
         },
         returnClause: ReturnClauseSyntax(
           type: TypeSyntax(
@@ -553,6 +482,7 @@ public enum WitnessGenerator {
   }
 
   static private func constructorArguments(_ protocolDecl: ProtocolDeclSyntax) -> [LabeledExprSyntax] {
+    // TODO: Transform witness variables
     protocolDecl.memberBlock.members
       .compactMap({
         guard let functionDecl = $0.decl.as(FunctionDeclSyntax.self) else {
@@ -804,4 +734,10 @@ extension FunctionDeclSyntax {
   func isModifiedWith(_ keyword: Keyword) -> Bool {
     modifiers.contains(where: { $0.name.text == TokenSyntax.keyword(keyword).text})
   }
+}
+
+enum TransformedWitnessSemantic: String {
+  case iso
+  case pullback
+  case map
 }
