@@ -131,11 +131,6 @@ public enum WitnessGenerator {
     return Set(variances)
   }
 
-  static private func transformedInstance(_ protocolDecl: ProtocolDeclSyntax) {
-
-
-  }
-
   static private func processProtocolRequirement(_ decl: DeclSyntax) -> MemberBlockItemSyntax? {
     if let functionDecl = decl.as(FunctionDeclSyntax.self) {
       return MemberBlockItemSyntax(
@@ -228,7 +223,7 @@ public enum WitnessGenerator {
 
   static func inoutSelfTupleTypeElement() -> TupleTypeElementSyntax {
     TupleTypeElementSyntax(
-      type:  AttributedTypeSyntax(
+      type: AttributedTypeSyntax(
         specifier: .keyword(.inout),
         baseType: IdentifierTypeSyntax(
           name: TokenSyntax(stringLiteral: Self.genericLabel)
@@ -321,7 +316,7 @@ public enum WitnessGenerator {
     // If we detect `.invariant` or a mix of covariant+contravariant, we typically want `iso`.
     if variances.contains(.invariant) ||
        (variances.contains(.contravariant) && variances.contains(.covariant)) {
-      members.append(MemberBlockItemSyntax(decl: isoMethodDecl(witnessName: witnessName)))
+      members.append(MemberBlockItemSyntax(decl: isoMethodDecl(protocolDecl: protocolDecl, witnessName: witnessName)))
     } else {
       // If strictly contravariant => generate pullback
       if variances.contains(.contravariant) {
@@ -463,7 +458,7 @@ public enum WitnessGenerator {
   ///   }
   /// }
   /// ```
-  static private func isoMethodDecl(witnessName: TokenSyntax) -> FunctionDeclSyntax {
+  static private func isoMethodDecl(protocolDecl: ProtocolDeclSyntax, witnessName: TokenSyntax) -> FunctionDeclSyntax {
     // `func iso<B>(_ pullback: @escaping (B) -> A, map: @escaping (A) -> B) -> <WitnessName><B>`
     FunctionDeclSyntax(
       name: .identifier("iso"),
@@ -513,12 +508,147 @@ public enum WitnessGenerator {
       )
     ) {
       CodeBlockItemListSyntax {
+        transformedInstance(protocolDecl)
       }
     }
   }
 
+  static private func transformedInstance(_ protocolDecl: ProtocolDeclSyntax) -> FunctionCallExprSyntax {
+    FunctionCallExprSyntax(
+      calledExpression: MemberAccessExprSyntax(
+        declName: DeclReferenceExprSyntax(
+          baseName: .identifier("init")
+        )
+      ),
+      leftParen: .leftParenToken(),
+      arguments: .init(itemsBuilder: {
+        for argument in constructorArguments(protocolDecl) {
+          argument
+        }
+      }),
+      rightParen: .rightParenToken()
+    )
+
+  }
+
+  static private func constructorArguments(_ protocolDecl: ProtocolDeclSyntax) -> [LabeledExprSyntax] {
+    protocolDecl.memberBlock.members
+      .compactMap({
+        guard let functionDecl = $0.decl.as(FunctionDeclSyntax.self) else {
+          return nil
+        }
+
+        return LabeledExprSyntax(
+          label: functionDecl.name,
+          colon: .colonToken(),
+          expression: transformedClosure(functionDecl, protocolDecl: protocolDecl))
+      })
+  }
+
+  static private func transformedClosure(_ functionDecl: FunctionDeclSyntax, protocolDecl: ProtocolDeclSyntax) -> ClosureExprSyntax {
+    let generics = associatedTypeToGenericParam(protocolDecl, primary: nil)
+    let closureType = functionRequirementWitnessType(functionDecl)
+    let closureCall = FunctionCallExprSyntax(
+      calledExpression: MemberAccessExprSyntax(
+        base: DeclReferenceExprSyntax(baseName: .identifier("self")),
+        declName: DeclReferenceExprSyntax(baseName: functionDecl.name)
+      ),
+      leftParen: .leftParenToken(),
+      rightParen: .rightParenToken(),
+      argumentsBuilder: {
+        // Rest of params
+        for (index, parameter) in closureType.parameters.enumerated() {
+          if varianceOf(parameter: parameter, generics: generics) == .invariant {
+            LabeledExprSyntax(
+              expression: FunctionCallExprSyntax(
+                calledExpression: DeclReferenceExprSyntax(
+                  baseName: .identifier("pullback")
+                ),
+                leftParen: .leftParenToken(),
+                arguments: LabeledExprListSyntax(
+                  arrayLiteral: .init(
+                    expression: DeclReferenceExprSyntax(
+                      baseName: .dollarIdentifier("$\(index)")
+                    )
+                  )
+                ),
+                rightParen: .rightParenToken()
+              )
+            )
+          } else {
+            LabeledExprListSyntax(
+              arrayLiteral: .init(
+                expression: DeclReferenceExprSyntax(
+                  baseName: .dollarIdentifier("$\(index)")
+                )
+              )
+            )
+          }
+        }
+      }
+    )
+
+    let variance = variance(
+      functionSignature: functionDecl.signature,
+      generics: generics
+    )
+
+    // If contains Self in the return type then map the return value
+    if variance == .covariant || variance == .invariant {
+      return ClosureExprSyntax(
+        signature: nil,
+        statementsBuilder: {
+          CodeBlockItemSyntax(
+            item: .expr(
+              ExprSyntax(
+                FunctionCallExprSyntax(
+                  calledExpression: DeclReferenceExprSyntax(
+                    baseName: .identifier("map")
+                  ),
+                  leftParen: .leftParenToken(),
+                  arguments: .init(
+                    itemsBuilder: {
+                      LabeledExprSyntax(expression: closureCall)
+                      }
+                  ),
+                  rightParen: .rightParenToken()
+                )
+              )
+            )
+          )
+        }
+      )
+    }
+
+    // Does not have contain Self in the return type
+    return ClosureExprSyntax(
+      signature: nil,
+      statementsBuilder: {
+        CodeBlockItemSyntax(
+          item: .expr(
+            ExprSyntax(
+              closureCall
+            )
+          )
+        )
+      }
+    )
+  }
 
 
+  static private func functionTypes(_ protocolDecl: ProtocolDeclSyntax) -> [FunctionTypeSyntax] {
+    protocolDecl.memberBlock.members.compactMap { member in
+      let decl = member.decl
+      if let functionDecl = decl.as(FunctionDeclSyntax.self) {
+        return functionRequirementWitnessType(functionDecl)
+      } else if let variableDecl = decl.as(VariableDeclSyntax.self),
+                let identifier = variableDecl.bindings.first?.pattern.as(IdentifierPatternSyntax.self) {
+
+        return variableRequirementWitnessType(variableDecl)
+      }
+      return nil
+    }
+  }
 
   // MARK: Helpers
 
@@ -589,6 +719,22 @@ public enum WitnessGenerator {
       }
   }
 
+  static func varianceOf(
+    parameter: TupleTypeElementSyntax,
+    generics: [GenericParameterSyntax]
+  ) -> Variance {
+    var declaredGenericNames = Set(generics.map { $0.name.text })
+    declaredGenericNames.insert("Self")
+    let genericsInParamType = Set<String>()
+    let collector = GenericNameCollector(declaredGenerics: declaredGenericNames)
+    collector.walk(parameter)
+
+    if !genericsInParamType.intersection(declaredGenericNames).isEmpty {
+      return .contravariant
+    }
+
+    return .invariant
+  }
 }
 
 extension String {
@@ -629,5 +775,12 @@ final class GenericNameCollector: SyntaxVisitor {
       foundGenerics.insert(name)
     }
     return .visitChildren
+  }
+}
+
+
+extension FunctionDeclSyntax {
+  func isModifiedWith(_ keyword: Keyword) -> Bool {
+    modifiers.contains(where: { $0.name.text == TokenSyntax.keyword(keyword).text})
   }
 }
