@@ -1,14 +1,19 @@
 import Witness
 import Foundation
 
-@Witness
+@Witnessed([.utilities])
+protocol Comparable {
+  func compare(_ other: Self) -> Bool
+}
+
+@Witnessed([.utilities])
 protocol Combinable {
   func combine(_ other: Self) -> Self
 }
 
 typealias Combining<A> = CombinableWitness<A>
 
-@Witness
+@Witnessed
 protocol Diffable {
   static func diff(old: Self, new: Self) -> (String, [String])?
   var data: Data { get }
@@ -17,7 +22,7 @@ protocol Diffable {
 
 typealias Diffing<A> = DiffableWitness<A>
 
-@Witness
+@Witnessed([.utilities])
 protocol Snapshottable {
   associatedtype Format: Diffable
   static var pathExtension: String { get }
@@ -26,7 +31,7 @@ protocol Snapshottable {
 
 typealias Snapshotting<Value, Format: Diffable> = SnapshottableWitness<Value, Format>
 
-@Witness
+@Witnessed
 protocol Convertible {
   associatedtype To
   func convert() -> To
