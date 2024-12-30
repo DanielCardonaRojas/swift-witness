@@ -3,4 +3,4 @@ public enum WitnessOptions: String {
 }
 
 @attached(peer, names: suffixed(Witness))
-public macro Witness(_ options: [WitnessOptions] = []) = #externalMacro(module: "WitnessMacros", type: "WitnessMacro")
+public macro Witnessed(_ options: [WitnessOptions] = []) = #externalMacro(module: "WitnessMacros", type: "WitnessMacro")
