@@ -46,6 +46,12 @@ public enum WitnessGenerator {
             member
           }
 
+          // Initializers
+          witnessDefaultInit(protocolDecl)
+          if containsOption("conformanceInit", protocolDecl: protocolDecl) {
+            witnessConformanceInit(protocolDecl)
+          }
+
           // Utilities
           if containsOption("utilities", protocolDecl: protocolDecl) {
             for utilityMethod in utilityMethods {
@@ -78,6 +84,141 @@ public enum WitnessGenerator {
     })
 
     return attribute != nil
+  }
+
+  static func requirementNames(_ protocolDecl: ProtocolDeclSyntax) -> [TokenSyntax] {
+    requirements(protocolDecl).map(\.name)
+  }
+
+  /// returns a spec for the requirements of a protocol `name` of the function or variable
+  static func requirements(_ protocolDecl: ProtocolDeclSyntax) -> [(name: TokenSyntax, static: Bool, variable: Bool, parameters: [TokenSyntax])] {
+    protocolDecl.memberBlock.members.compactMap(
+{ member in
+      let decl = member.decl
+
+      if let functionDecl = decl.as(FunctionDeclSyntax.self) {
+        let parameters = functionDecl.signature.parameterClause.parameters.map({
+          $0.secondName ?? $0.firstName
+        })
+        return (
+          functionDecl.name,
+          functionDecl.isModifiedWith(.static),
+          false,
+          parameters
+        )
+      }
+
+      if let variableDecl = decl.as(VariableDeclSyntax.self),
+          let identifier = variableDecl.bindings.first?.pattern.as(IdentifierPatternSyntax.self) {
+        return (identifier.identifier, variableDecl.isModifiedWith(.static), true, [])
+      }
+      return nil
+    })
+  }
+
+  static func witnessDefaultInit(_ protocolDecl: ProtocolDeclSyntax) -> InitializerDeclSyntax {
+    .init(
+      signature: .init(
+        parameterClause: defaultInitializerParameters(protocolDecl)
+      ),
+      body: .init(statementsBuilder: {
+        for name in requirementNames(protocolDecl) {
+          InfixOperatorExprSyntax(
+            leftOperand: MemberAccessExprSyntax(
+              base: DeclReferenceExprSyntax(baseName: .identifier("self")),
+              declName: DeclReferenceExprSyntax(baseName: name)
+            ),
+            operator: AssignmentExprSyntax(),
+            rightOperand: DeclReferenceExprSyntax(baseName: name)
+          )
+        }
+      })
+    )
+  }
+
+
+  /// Creates a witness from a type that conforms to the protocol that the witness represents
+  static func witnessConformanceInit(_ protocolDecl: ProtocolDeclSyntax) -> InitializerDeclSyntax {
+    .init(
+      signature: .init(parameterClause: .init(parametersBuilder: {})),
+      genericWhereClause: .init(
+        requirements: .init(
+          itemsBuilder: {
+            GenericRequirementSyntax(
+              requirement: .conformanceRequirement(
+                .init(
+                  leftType: IdentifierTypeSyntax(
+                    name: .identifier(Self.genericLabel)
+                  ),
+                  rightType: IdentifierTypeSyntax(
+                    name: protocolDecl.name
+                  )
+                )
+              )
+            )
+          }
+        )
+      ),
+      body: .init(
+statementsBuilder: {
+        for (name, isStatic, isVariable, parameters) in requirements(protocolDecl) {
+          InfixOperatorExprSyntax(
+            leftOperand: MemberAccessExprSyntax(
+              base: DeclReferenceExprSyntax(baseName: .identifier("self")),
+              declName: DeclReferenceExprSyntax(baseName: name)
+            ),
+            operator: AssignmentExprSyntax(),
+            rightOperand: ClosureExprSyntax(
+              signature: isStatic && parameters.isEmpty ? nil : ClosureSignatureSyntax(
+                parameterClause: ClosureSignatureSyntax
+                  .ParameterClause(
+                  ClosureShorthandParameterListSyntax(
+                    itemsBuilder: {
+                      if !isStatic {
+                        ClosureShorthandParameterSyntax(name: .identifier("instance"))
+                      }
+
+                      for parameterName in parameters {
+                        ClosureShorthandParameterSyntax(name: parameterName)
+                      }
+                    }
+                  )
+                )
+              ),
+              statements: CodeBlockItemListSyntax(
+                itemsBuilder: {
+                  if !isVariable {
+                    FunctionCallExprSyntax.init(
+                      calledExpression: MemberAccessExprSyntax.init(
+                        base: DeclReferenceExprSyntax(baseName: .identifier(isStatic ? Self.genericLabel : "instance")),
+                        declName: DeclReferenceExprSyntax(baseName: name)
+                      ),
+                      leftParen: .leftParenToken(),
+                      rightParen: .rightParenToken(),
+                      argumentsBuilder: {
+                        for parameterName in parameters {
+                          LabeledExprSyntax(
+                            expression: DeclReferenceExprSyntax(
+                              baseName: parameterName
+                            )
+                          )
+                        }
+                      }
+                    )
+                  } else {
+                    MemberAccessExprSyntax.init(
+                      base: DeclReferenceExprSyntax(baseName: .identifier(isStatic ? Self.genericLabel : "instance")),
+                      declName: DeclReferenceExprSyntax(baseName: name)
+                    )
+
+                  }
+                }
+              )
+            )
+          )
+        }
+      })
+    )
   }
 
   static func witnessStructName(_ protocolDecl: ProtocolDeclSyntax) -> TokenSyntax {
@@ -131,6 +272,50 @@ public enum WitnessGenerator {
     }
 
     return Set(variances)
+  }
+
+  static private func defaultInitializerParameters(_ protocolDecl: ProtocolDeclSyntax) -> FunctionParameterClauseSyntax {
+    let parameters = protocolDecl.memberBlock.members.compactMap({ member in
+      let decl = member.decl
+      if let functionDecl = decl.as(FunctionDeclSyntax.self) {
+        return FunctionParameterSyntax(
+          firstName: functionDecl.name,
+          type: AttributedTypeSyntax(
+            specifiers: .init(itemsBuilder: {}),
+            attributes: .init(itemsBuilder: {
+              AttributeSyntax(
+                atSign: .atSignToken(),
+                attributeName: IdentifierTypeSyntax(name: .identifier("escaping"))
+              )
+            }),
+            baseType: functionRequirementWitnessType(functionDecl)
+          )
+        )
+      } else if let variableDecl = decl.as(VariableDeclSyntax.self),
+                let identifier = variableDecl.bindings.first?.pattern.as(IdentifierPatternSyntax.self) {
+        return FunctionParameterSyntax(
+          firstName: identifier.identifier,
+          type: AttributedTypeSyntax(
+            specifiers: .init(itemsBuilder: {}),
+            attributes: .init(itemsBuilder: {
+              AttributeSyntax(
+                atSign: .atSignToken(),
+                attributeName: IdentifierTypeSyntax(name: .identifier("escaping"))
+              )
+            }),
+            baseType: variableRequirementWitnessType(variableDecl)
+          )
+        )
+      } else {
+        return nil
+      }
+    })
+
+    return .init(parametersBuilder: {
+      for param in parameters {
+        param
+      }
+    })
   }
 
   static private func processProtocolRequirement(_ decl: DeclSyntax) -> MemberBlockItemSyntax? {
@@ -731,6 +916,12 @@ final class GenericNameCollector: SyntaxVisitor {
 
 
 extension FunctionDeclSyntax {
+  func isModifiedWith(_ keyword: Keyword) -> Bool {
+    modifiers.contains(where: { $0.name.text == TokenSyntax.keyword(keyword).text})
+  }
+}
+
+extension VariableDeclSyntax {
   func isModifiedWith(_ keyword: Keyword) -> Bool {
     modifiers.contains(where: { $0.name.text == TokenSyntax.keyword(keyword).text})
   }
