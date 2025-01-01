@@ -28,6 +28,9 @@ public enum WitnessGenerator {
     let utilityMethods = generateUtilityExtensions(protocolDecl, variances: variances)
 
     let structDecl = StructDeclSyntax(
+      modifiers: .init(itemsBuilder: {
+        DeclModifierSyntax(name: .keyword(.public))
+      }),
       name: "\(raw: protocolDecl.name.text)Witness",
       genericParameterClause: genericParameterClause(protocolDecl),
       memberBlock: MemberBlockSyntax(
@@ -118,6 +121,9 @@ public enum WitnessGenerator {
 
   static func witnessDefaultInit(_ protocolDecl: ProtocolDeclSyntax) -> InitializerDeclSyntax {
     .init(
+      modifiers: .init(itemsBuilder: {
+        DeclModifierSyntax(name: .keyword(.public))
+      }),
       signature: .init(
         parameterClause: defaultInitializerParameters(protocolDecl)
       ),
@@ -140,6 +146,9 @@ public enum WitnessGenerator {
   /// Creates a witness from a type that conforms to the protocol that the witness represents
   static func witnessConformanceInit(_ protocolDecl: ProtocolDeclSyntax) -> InitializerDeclSyntax {
     .init(
+      modifiers: .init(itemsBuilder: {
+        DeclModifierSyntax(name: .keyword(.public))
+      }),
       signature: .init(parameterClause: .init(parametersBuilder: {})),
       genericWhereClause: .init(
         requirements: .init(
@@ -227,6 +236,9 @@ statementsBuilder: {
 
   static private func witnessVariableDecl(_ name: String) -> VariableDeclSyntax {
     VariableDeclSyntax(
+      modifiers: .init(itemsBuilder: {
+        DeclModifierSyntax(name: .keyword(.public))
+      }),
       bindingSpecifier: .keyword(.let),
       bindings: PatternBindingListSyntax(
         itemsBuilder: {
@@ -322,6 +334,9 @@ statementsBuilder: {
     if let functionDecl = decl.as(FunctionDeclSyntax.self) {
       return MemberBlockItemSyntax(
         decl: VariableDeclSyntax(
+          modifiers: .init(itemsBuilder: {
+            DeclModifierSyntax(name: .keyword(.public))
+          }),
           bindingSpecifier: .keyword(.let),
           bindings: PatternBindingListSyntax(
             itemsBuilder: {
@@ -340,6 +355,9 @@ statementsBuilder: {
               let identifier = variableDecl.bindings.first?.pattern.as(IdentifierPatternSyntax.self) {
       return MemberBlockItemSyntax(
         decl: VariableDeclSyntax(
+          modifiers: .init(itemsBuilder: {
+            DeclModifierSyntax(name: .keyword(.public))
+          }),
           bindingSpecifier: .keyword(.let),
           bindings: PatternBindingListSyntax(
             itemsBuilder: {
