@@ -17,7 +17,10 @@ public enum WitnessGenerator {
 
   public static func processProtocol(protocolDecl: ProtocolDeclSyntax) throws -> [DeclSyntax] {
     let convertedProtocolRequirements: [MemberBlockItemSyntax] = protocolDecl.memberBlock.members.compactMap { member in
-      if let member = processProtocolRequirement(member.decl) {
+      if let member = processProtocolRequirement(
+        member.decl,
+        accessModifier: accessModifier(protocolDecl)
+      ) {
         return member
       }
       return nil
@@ -29,7 +32,9 @@ public enum WitnessGenerator {
 
     let structDecl = StructDeclSyntax(
       modifiers: .init(itemsBuilder: {
-        DeclModifierSyntax(name: .keyword(.public))
+        if let modifier = accessModifier(protocolDecl) {
+          modifier
+        }
       }),
       name: "\(raw: protocolDecl.name.text)Witness",
       genericParameterClause: genericParameterClause(protocolDecl),
@@ -139,7 +144,9 @@ public enum WitnessGenerator {
   static func witnessDefaultInit(_ protocolDecl: ProtocolDeclSyntax) -> InitializerDeclSyntax {
     .init(
       modifiers: .init(itemsBuilder: {
-        DeclModifierSyntax(name: .keyword(.public))
+        if let modifier = accessModifier(protocolDecl) {
+          modifier
+        }
       }),
       signature: .init(
         parameterClause: defaultInitializerParameters(protocolDecl)
@@ -169,7 +176,9 @@ public enum WitnessGenerator {
     // init() where Self: <Protocol>, AssociatedType: <Constraint> ...
     .init(
       modifiers: .init(itemsBuilder: {
-        DeclModifierSyntax(name: .keyword(.public))
+        if let modifier = accessModifier(protocolDecl) {
+          modifier
+        }
       }),
       signature: .init(parameterClause: .init(parametersBuilder: {})),
       genericWhereClause: .init(
@@ -439,12 +448,14 @@ public enum WitnessGenerator {
     })
   }
 
-  static private func processProtocolRequirement(_ decl: DeclSyntax) -> MemberBlockItemSyntax? {
+  static private func processProtocolRequirement(_ decl: DeclSyntax, accessModifier: DeclModifierSyntax?) -> MemberBlockItemSyntax? {
     if let functionDecl = decl.as(FunctionDeclSyntax.self) {
       return MemberBlockItemSyntax(
         decl: VariableDeclSyntax(
           modifiers: .init(itemsBuilder: {
-            DeclModifierSyntax(name: .keyword(.public))
+            if let accessModifier {
+              accessModifier
+            }
           }),
           bindingSpecifier: .keyword(.let),
           bindings: PatternBindingListSyntax(
@@ -465,7 +476,9 @@ public enum WitnessGenerator {
       return MemberBlockItemSyntax(
         decl: VariableDeclSyntax(
           modifiers: .init(itemsBuilder: {
-            DeclModifierSyntax(name: .keyword(.public))
+            if let accessModifier {
+              accessModifier
+            }
           }),
           bindingSpecifier: .keyword(.let),
           bindings: PatternBindingListSyntax(
@@ -696,6 +709,11 @@ public enum WitnessGenerator {
   ) -> FunctionDeclSyntax {
     // `func iso<B>(_ pullback: @escaping (B) -> A, map: @escaping (A) -> B) -> <WitnessName><B>`
     FunctionDeclSyntax(
+      modifiers: .init(itemsBuilder: {
+        if let accessModifier = accessModifier(protocolDecl) {
+          accessModifier
+        }
+      }),
       name: .identifier(semantic.rawValue),
       genericParameterClause: GenericParameterClauseSyntax(
         parameters: GenericParameterListSyntax {
@@ -916,6 +934,12 @@ public enum WitnessGenerator {
   }
 
   // MARK: Helpers
+
+  private static func accessModifier(_ protocolDecl: ProtocolDeclSyntax) -> DeclModifierSyntax? {
+    protocolDecl.modifiers.first(where: { modifier in
+      [TokenSyntax.keyword(.public), .keyword(.private), .keyword(.internal)].contains( where: { $0.text == modifier.name.text })
+    })
+  }
 
   /// Helper to produce "<witnessName><B>"
   private static func genericType(witnessName: TokenSyntax, typeArg: String) -> some TypeSyntaxProtocol {
