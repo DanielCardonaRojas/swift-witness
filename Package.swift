@@ -30,12 +30,14 @@ let package = Package(
             name: "WitnessMacros",
             dependencies: [
                 .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
-                .product(name: "SwiftCompilerPlugin", package: "swift-syntax")
+                .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
+                "Shared"
             ]
         ),
 
         // Library that exposes a macro as part of its API, which is used in client programs.
-        .target(name: "Witness", dependencies: ["WitnessMacros"]),
+        .target(name: "Witness", dependencies: ["WitnessMacros", "Shared"]),
+        .target(name: "Shared"),
 
         // A client of the library, which is able to use the macro in its own code.
         .executableTarget(name: "WitnessClient", dependencies: ["Witness"]),

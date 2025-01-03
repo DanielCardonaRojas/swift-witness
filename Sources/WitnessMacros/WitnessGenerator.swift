@@ -7,6 +7,7 @@
 
 import SwiftSyntax
 import SwiftSyntaxBuilder
+import Shared
 
 struct MacroError: Error {
   let message: String
@@ -56,12 +57,12 @@ public enum WitnessGenerator {
 
           // Initializers
           witnessDefaultInit(protocolDecl)
-          if containsOption("conformanceInit", protocolDecl: protocolDecl) {
+          if containsOption(.conformanceInit, protocolDecl: protocolDecl) {
             witnessConformanceInit(protocolDecl)
           }
 
           // Utilities
-          if containsOption("utilities", protocolDecl: protocolDecl) {
+          if containsOption(.utilities, protocolDecl: protocolDecl) {
             for utilityMethod in utilityMethods {
               utilityMethod
             }
@@ -73,7 +74,7 @@ public enum WitnessGenerator {
     return [DeclSyntax(structDecl)]
   }
 
-  static func containsOption(_ option: String, protocolDecl: ProtocolDeclSyntax) -> Bool {
+  static func containsOption(_ option: WitnessOptions, protocolDecl: ProtocolDeclSyntax) -> Bool {
     let attribute = protocolDecl.attributes.first(where: { attribute in
       guard let attr = attribute.as(AttributeSyntax.self) else {
         return false
@@ -85,7 +86,7 @@ public enum WitnessGenerator {
       }
 
       let hasConformance = arguments.contains(where: { element in
-        element.expression.description.contains(option)
+        element.expression.description.contains(option.rawValue)
       })
 
       return hasConformance
