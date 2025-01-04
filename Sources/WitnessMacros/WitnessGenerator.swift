@@ -547,8 +547,12 @@ public enum WitnessGenerator {
             TupleTypeElementSyntax(type: parameter.type)
           }
         }
-      }), returnClause: ReturnClauseSyntax(
-        type: Self.replaceSelf(typeSyntax: functionDecl.signature.returnClause?.type ?? TypeSyntax(stringLiteral: "Void"))))
+      }),
+      effectSpecifiers: functionDecl.signature.effectSpecifiers?.typeEffectSpecifiers(),
+      returnClause: ReturnClauseSyntax(
+        type: Self.replaceSelf(typeSyntax: functionDecl.signature.returnClause?.type ?? TypeSyntax(stringLiteral: "Void"))
+      )
+    )
   }
 
   static func inoutSelfTupleTypeElement() -> TupleTypeElementSyntax {

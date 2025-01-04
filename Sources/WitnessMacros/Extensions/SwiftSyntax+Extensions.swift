@@ -17,3 +17,13 @@ extension VariableDeclSyntax {
     modifiers.contains(where: { $0.name.text == TokenSyntax.keyword(keyword).text})
   }
 }
+
+extension FunctionEffectSpecifiersSyntax {
+  func typeEffectSpecifiers() -> TypeEffectSpecifiersSyntax {
+    return TypeEffectSpecifiersSyntax(
+      asyncSpecifier: asyncSpecifier,
+      throwsClause: throwsClause
+    )
+  }
+}
+
