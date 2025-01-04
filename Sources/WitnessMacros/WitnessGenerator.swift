@@ -846,7 +846,7 @@ public enum WitnessGenerator {
       argumentsBuilder: {
         // Rest of params
         for (index, parameter) in closureType.parameters.enumerated() {
-          if varianceOf(parameter: parameter, generics: generics) == .invariant {
+          if varianceOf(parameter: parameter, generics: generics) == .contravariant {
             LabeledExprSyntax(
               expression: FunctionCallExprSyntax(
                 calledExpression: DeclReferenceExprSyntax(
@@ -1018,10 +1018,10 @@ public enum WitnessGenerator {
     generics: [GenericParameterSyntax]
   ) -> Variance {
     var declaredGenericNames = Set(generics.map { $0.name.text })
-    declaredGenericNames.insert("Self")
-    let genericsInParamType = Set<String>()
+    declaredGenericNames.insert(Self.genericLabel)
     let collector = GenericNameCollector(declaredGenerics: declaredGenericNames)
     collector.walk(parameter)
+    let genericsInParamType = collector.foundGenerics
 
     if !genericsInParamType.intersection(declaredGenericNames).isEmpty {
       return .contravariant
