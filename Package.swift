@@ -47,6 +47,7 @@ let package = Package(
             name: "WitnessTests",
             dependencies: [
                 "WitnessMacros",
+                "Shared",
                 .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
             ]
         ),
