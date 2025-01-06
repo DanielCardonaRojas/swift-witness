@@ -819,20 +819,126 @@ public enum WitnessGenerator {
   }
 
   static private func constructorArguments(_ protocolDecl: ProtocolDeclSyntax) -> [LabeledExprSyntax] {
-    // TODO: Transform witness variables
     protocolDecl.memberBlock.members
-      .compactMap({
-        guard let functionDecl = $0.decl.as(FunctionDeclSyntax.self) else {
-          return nil
+      .compactMap(
+{
+        if let functionDecl = $0.decl.as(FunctionDeclSyntax.self) {
+          return LabeledExprSyntax(
+            label: functionDecl.name,
+            colon: .colonToken(),
+            expression: transformedClosure(functionDecl, protocolDecl: protocolDecl)
+          )
         }
 
-        return LabeledExprSyntax(
-          label: functionDecl.name,
-          colon: .colonToken(),
-          expression: transformedClosure(functionDecl, protocolDecl: protocolDecl))
+        if let variableDecl = $0.decl.as(VariableDeclSyntax.self),
+           let identifier = variableDecl.bindings.first?.pattern.as(IdentifierPatternSyntax.self) {
+          return LabeledExprSyntax(
+            label: identifier.identifier,
+            colon: .colonToken(),
+            expression: transformedVariableClosure(variableDecl, protocolDecl: protocolDecl)
+          )
+        }
+
+        return nil
       })
   }
 
+
+  static private func transformedVariableClosure(_ variableDecl: VariableDeclSyntax, protocolDecl: ProtocolDeclSyntax) -> ClosureExprSyntax {
+    let generics = associatedTypeToGenericParam(protocolDecl, primary: nil)
+    let closureType = variableRequirementWitnessType(variableDecl)
+    let variableName = variableDecl.bindings.first?.pattern.as(IdentifierPatternSyntax.self)?.identifier ?? .init(stringLiteral: "Unknown")
+    let variableType = variableDecl.bindings.first?.typeAnnotation
+    let closureCall = FunctionCallExprSyntax(
+      calledExpression: MemberAccessExprSyntax(
+        base: DeclReferenceExprSyntax(baseName: .identifier("self")),
+        declName: DeclReferenceExprSyntax(baseName: variableName)
+      ),
+      leftParen: .leftParenToken(),
+      rightParen: .rightParenToken(),
+      argumentsBuilder: {
+        // Rest of params
+        for (index, parameter) in closureType.parameters.enumerated() {
+          if varianceOf(parameter: parameter, generics: generics) == .contravariant {
+            LabeledExprSyntax(
+              expression: FunctionCallExprSyntax(
+                calledExpression: DeclReferenceExprSyntax(
+                  baseName: .identifier("pullback")
+                ),
+                leftParen: .leftParenToken(),
+                arguments: LabeledExprListSyntax(
+                  arrayLiteral: .init(
+                    expression: DeclReferenceExprSyntax(
+                      baseName: .dollarIdentifier("$\(index)")
+                    )
+                  )
+                ),
+                rightParen: .rightParenToken()
+              )
+            )
+          } else {
+            LabeledExprListSyntax(
+              arrayLiteral: .init(
+                expression: DeclReferenceExprSyntax(
+                  baseName: .dollarIdentifier("$\(index)")
+                )
+              )
+            )
+          }
+        }
+      }
+    )
+
+    // TODO: Also check for associated types
+    let hasSelfInType = variableType?.contains(targetTypeName: "Self") ?? false
+
+    let variance: Variance = hasSelfInType ? .covariant : .invariant
+
+    // If contains Self in the return type then map the return value
+    if variance == .covariant {
+      return ClosureExprSyntax(
+        signature: nil,
+        statementsBuilder: {
+          CodeBlockItemSyntax(
+            item: .expr(
+              ExprSyntax(
+                FunctionCallExprSyntax(
+                  calledExpression: DeclReferenceExprSyntax(
+                    baseName: .identifier("map")
+                  ),
+                  leftParen: .leftParenToken(),
+                  arguments: .init(
+                    itemsBuilder: {
+                      LabeledExprSyntax(expression: closureCall)
+                      }
+                  ),
+                  rightParen: .rightParenToken()
+                )
+              )
+            )
+          )
+        }
+      )
+    }
+
+    // Does not have contain Self in the return type
+    return ClosureExprSyntax(
+      signature: nil,
+      statementsBuilder: {
+        CodeBlockItemSyntax(
+          item: .expr(
+            ExprSyntax(
+              closureCall
+            )
+          )
+        )
+      }
+    )
+  }
+
+  /// Creates an a closure expression with converted input and outputs.
+  ///
+  /// This is used in the transform the closures of a Witness<A> to a Witness<B>
   static private func transformedClosure(_ functionDecl: FunctionDeclSyntax, protocolDecl: ProtocolDeclSyntax) -> ClosureExprSyntax {
     let generics = associatedTypeToGenericParam(protocolDecl, primary: nil)
     let closureType = functionRequirementWitnessType(functionDecl)
@@ -923,7 +1029,6 @@ public enum WitnessGenerator {
     )
   }
 
-
   static private func functionTypes(_ protocolDecl: ProtocolDeclSyntax) -> [FunctionTypeSyntax] {
     protocolDecl.memberBlock.members.compactMap { member in
       let decl = member.decl
@@ -940,6 +1045,7 @@ public enum WitnessGenerator {
 
   // MARK: Helpers
 
+  /// Retrieves the access modifier of the protocol declaration
   private static func accessModifier(_ protocolDecl: ProtocolDeclSyntax) -> DeclModifierSyntax? {
     protocolDecl.modifiers.first(where: { modifier in
       [TokenSyntax.keyword(.public), .keyword(.private), .keyword(.internal)].contains( where: { $0.text == modifier.name.text })
