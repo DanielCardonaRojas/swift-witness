@@ -27,8 +27,8 @@ extension WitnessGenerator {
 
   /// Helper to produce "<witnessName><B>"
   static func genericType(witnessName: TokenSyntax, typeArg: String) -> some TypeSyntaxProtocol {
-    return IdentifierTypeSyntax(
-      name: witnessName,
+    genericType(
+      witnessName: witnessName,
       genericArgumentClause: GenericArgumentClauseSyntax(
         arguments: GenericArgumentListSyntax {
           GenericArgumentSyntax(argument: IdentifierTypeSyntax(name: .identifier(typeArg)))
@@ -36,7 +36,14 @@ extension WitnessGenerator {
       )
     )
   }
-  
+
+  static func genericType(witnessName: TokenSyntax, genericArgumentClause: GenericArgumentClauseSyntax) -> some TypeSyntaxProtocol {
+    return IdentifierTypeSyntax(
+      name: witnessName,
+      genericArgumentClause: genericArgumentClause
+    )
+  }
+
   /// Produces `A` in a closures parameter type in for example: `(inout A) -> Bool`
   static func inoutSelfTupleTypeElement() -> TupleTypeElementSyntax {
     TupleTypeElementSyntax(
