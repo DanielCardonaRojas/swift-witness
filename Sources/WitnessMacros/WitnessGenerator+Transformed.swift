@@ -37,7 +37,7 @@ extension WitnessGenerator {
   /// Generates method transforming witness to another type
   /// ```swift
   /// extension <WitnessName> {
-  ///   func pullback<B>(_ f: @escaping (B) -> A) -> <WitnessName><B> {
+  ///   func transform<B>(_ f: @escaping (B) -> A) -> <WitnessName><B> {
   ///     .init(combine: { b1, b2 in
   ///       self.combine(f(b1), f(b2))
   ///     })
@@ -47,7 +47,7 @@ extension WitnessGenerator {
   /// or:
   /// ```swift
   /// extension <WitnessName> {
-  ///   func map<B>(_ f: @escaping (A) -> B) -> <WitnessName><B> {
+  ///   func transform<B>(_ f: @escaping (A) -> B) -> <WitnessName><B> {
   ///     .init(combine: { a1, a2 in
   ///       let result = self.combine(a1, a2)
   ///       return f(result)
@@ -58,7 +58,7 @@ extension WitnessGenerator {
   /// or:
   /// ```swift
   /// extension <WitnessName> {
-  ///   func iso<B>(
+  ///   func transform<B>(
   ///     _ pullback: @escaping (B) -> A,
   ///     map: @escaping (A) -> B
   ///   ) -> <WitnessName><B> {
@@ -74,14 +74,14 @@ extension WitnessGenerator {
     protocolDecl: ProtocolDeclSyntax,
     witnessName: TokenSyntax
   ) -> FunctionDeclSyntax {
-    // `func iso<B>(_ pullback: @escaping (B) -> A, map: @escaping (A) -> B) -> <WitnessName><B>`
+    // `func transform<B>(_ pullback: @escaping (B) -> A, map: @escaping (A) -> B) -> <WitnessName><B>`
     FunctionDeclSyntax(
       modifiers: .init(itemsBuilder: {
         if let accessModifier = accessModifier(protocolDecl) {
           accessModifier
         }
       }),
-      name: .identifier(semantic.rawValue),
+      name: .identifier("transform"),
       genericParameterClause: GenericParameterClauseSyntax(
         parameters: GenericParameterListSyntax {
           GenericParameterSyntax(name: .identifier("B"))
@@ -91,67 +91,19 @@ extension WitnessGenerator {
         parameterClause: FunctionParameterClauseSyntax {
           // ( _ pullback: @escaping (B) -> A )
           if semantic == .iso || semantic == .pullback {
-            FunctionParameterSyntax(
-              firstName: .identifier("pullback"),
-              colon: .colonToken(),
-              type: AttributedTypeSyntax(
-                specifiers: .init(itemsBuilder: {
-
-                }),
-                attributes: .init(
-                  itemsBuilder: {
-                    AttributeSyntax(
-                      atSign: .atSignToken(),
-                      attributeName: IdentifierTypeSyntax(name: .identifier("escaping"))
-                    )
-                  }),
-                baseType:
-                  FunctionTypeSyntax(
-                    parameters: TupleTypeElementListSyntax {
-                      TupleTypeElementSyntax(
-                        type: IdentifierTypeSyntax(name: .identifier("B"))
-                      )
-                    },
-                    returnClause: ReturnClauseSyntax(
-                      type: IdentifierTypeSyntax(name: .identifier(genericLabel))
-                    )
-                  )
-              )
-            )
+            closureParameterTransformType(from: genericLabel, to: "B", name: "pullback")
           }
           // ( map: @escaping (A) -> B )
           if semantic == .iso || semantic == .map {
-            FunctionParameterSyntax(
-              firstName: .identifier("map"),
-              colon: .colonToken(),
-              type: AttributedTypeSyntax(
-                specifiers: .init(itemsBuilder: {
-
-                }),
-                attributes: .init(
-                  itemsBuilder: {
-                    AttributeSyntax(
-                      atSign: .atSignToken(),
-                      attributeName: IdentifierTypeSyntax(name: .identifier("escaping"))
-                    )
-                  }),
-                baseType: FunctionTypeSyntax(
-                  parameters: TupleTypeElementListSyntax {
-                    TupleTypeElementSyntax(
-                      type: IdentifierTypeSyntax(name: .identifier(genericLabel))
-                    )
-                  },
-                  returnClause: ReturnClauseSyntax(
-                    type: IdentifierTypeSyntax(name: .identifier("B"))
-                  )
-                )
-              )
-            )
+            closureParameterTransformType(from: genericLabel, to: "B", name: "map")
           }
         },
         returnClause: ReturnClauseSyntax(
           type: TypeSyntax(
-            genericType(witnessName: witnessName, typeArg: "B")
+            genericType(
+              witnessName: witnessName,
+              genericArgumentClause: transformGenericArgumentClause(protocolDecl)
+            )
           )
         )
       )
@@ -160,6 +112,63 @@ extension WitnessGenerator {
         transformedInstance(protocolDecl)
       }
     }
+  }
+
+  /// Creates a closure type function parameter like: `pullback: @espacing (A) -> B` where `A` is `genericIn` and `B` is `genericOut`
+  static func closureParameterTransformType(from genericIn: String, to genericOut: String, name: String) -> FunctionParameterSyntax {
+    FunctionParameterSyntax(
+      firstName: .identifier(name),
+      colon: .colonToken(),
+      type: AttributedTypeSyntax(
+        specifiers: .init(itemsBuilder: {
+
+        }),
+        attributes: .init(
+          itemsBuilder: {
+            AttributeSyntax(
+              atSign: .atSignToken(),
+              attributeName: IdentifierTypeSyntax(name: .identifier("escaping"))
+            )
+          }),
+        baseType:
+          FunctionTypeSyntax(
+            parameters: TupleTypeElementListSyntax {
+              TupleTypeElementSyntax(
+                type: IdentifierTypeSyntax(name: .identifier(genericOut))
+              )
+            },
+            returnClause: ReturnClauseSyntax(
+              type: IdentifierTypeSyntax(name: .identifier(genericIn))
+            )
+          )
+      )
+    )
+  }
+
+  static func transformGenericArgumentClause(
+    _ protocolDecl: ProtocolDeclSyntax,
+    typeReplacementForSelf: String = "B"
+  ) -> GenericArgumentClauseSyntax {
+      let nonPrimary = associatedTypeToGenericParam(protocolDecl, primary: false)
+      let primary = associatedTypeToGenericParam(protocolDecl, primary: true)
+
+    let parameters = GenericArgumentListSyntax(itemsBuilder: {
+      GenericArgumentSyntax(
+        argument: IdentifierTypeSyntax(
+          name: TokenSyntax(stringLiteral: typeReplacementForSelf)
+        )
+      )
+
+        for parameter in primary {
+          parameter.toGenericArgumentSyntax()
+        }
+
+        for parameter in nonPrimary {
+          parameter.toGenericArgumentSyntax()
+        }
+      })
+
+    return GenericArgumentClauseSyntax(arguments: parameters)
   }
 
   static func transformedInstance(_ protocolDecl: ProtocolDeclSyntax) -> FunctionCallExprSyntax {
@@ -345,12 +354,12 @@ extension WitnessGenerator {
     )
 
     let variance = variance(
-      functionSignature: functionDecl.signature,
+      functionDecl: functionDecl,
       generics: generics
     )
 
     // If contains Self in the return type then map the return value
-    if variance == .covariant || variance == .invariant {
+    if variance.contains(.covariant) {
       return ClosureExprSyntax(
         signature: nil,
         statementsBuilder: {
@@ -400,9 +409,10 @@ extension WitnessGenerator {
   ///   - generics: The generic parameters (e.g., `T`, `U`) declared on the function.
   /// - Returns: A `Variance` value (`.contravariant`, `.covariant`, or `.invariant`).
   static func variance(
-      functionSignature: FunctionSignatureSyntax,
+      functionDecl: FunctionDeclSyntax,
       generics: [GenericParameterSyntax]
-  ) -> Variance {
+  ) -> Set<Variance> {
+      let functionSignature = functionDecl.signature
       // 1) Collect the declared generic names: e.g., ["T", "U", ...]
       var declaredGenericNames = Set(generics.map { $0.name.text })
       declaredGenericNames.insert("Self")
@@ -415,6 +425,10 @@ extension WitnessGenerator {
           let collector = GenericNameCollector(declaredGenerics: declaredGenericNames)
           collector.walk(paramType)
           genericsInParams.formUnion(collector.foundGenerics)
+      }
+
+      if !functionDecl.isModifiedWith(.static) {
+        genericsInParams.insert("Self")
       }
 
       // 3) Collect generics used in the return type (output position).
@@ -431,17 +445,22 @@ extension WitnessGenerator {
       //    - If generics are only in parameters => contravariant
       //    - If generics are only in return => covariant
       //    - Otherwise (e.g., none used at all) => invariant
-      let intersection = genericsInParams.intersection(genericsInReturn)
-      if !intersection.isEmpty {
-          return .invariant
-      } else if !genericsInParams.isEmpty && genericsInReturn.isEmpty {
-          return .contravariant
-      } else if genericsInParams.isEmpty && !genericsInReturn.isEmpty {
-          return .covariant
-      } else {
-          // If no generics are found at all or any other fallback scenario:
-          return .invariant
+      let parameterAndReturnIntersection = genericsInParams.intersection(genericsInReturn)
+      var variances = Set<Variance>()
+
+      if !genericsInReturn.isEmpty {
+        variances.insert(.covariant)
       }
+
+      if !genericsInParams.isEmpty {
+        variances.insert(.contravariant)
+      }
+
+      if genericsInParams.isEmpty && genericsInReturn.isEmpty {
+        variances.insert(.invariant)
+      }
+
+      return variances
   }
 
   static func varianceOf(
@@ -467,11 +486,11 @@ extension WitnessGenerator {
   /// if the set contains a contravariant and not a covariant then a pullback is required
   static func witnessStructVariance(_ protocolDecl: ProtocolDeclSyntax) -> Set<Variance> {
     let generics = associatedTypeToGenericParam(protocolDecl, primary: nil)
-    let variances: [Variance] = protocolDecl.memberBlock.members.compactMap { member in
+    let variances: [Variance] = protocolDecl.memberBlock.members.flatMap { member in
       guard let functionDecl = member.decl.as(FunctionDeclSyntax.self) else {
-        return nil
+        return Set<Variance>()
       }
-      return variance(functionSignature: functionDecl.signature, generics: generics)
+      return variance(functionDecl: functionDecl, generics: generics)
     }
 
     return Set(variances)
