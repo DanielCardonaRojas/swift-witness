@@ -27,3 +27,12 @@ extension FunctionEffectSpecifiersSyntax {
   }
 }
 
+extension GenericParameterSyntax {
+  func toGenericArgumentSyntax() -> GenericArgumentSyntax {
+    .init(
+      argument: IdentifierTypeSyntax(name: name)
+    )
+
+  }
+}
+
