@@ -146,7 +146,7 @@ final class WitnessedTests: XCTestCase {
   func testSnapshottable() {
     assertMacro {
       """
-      @Witnessed()
+      @Witnessed([.conformanceInit])
       public protocol Snapshottable {
         associatedtype Format: Diffable
         static var pathExtension: String { get }
@@ -170,6 +170,16 @@ final class WitnessedTests: XCTestCase {
           self.diffable = diffable
           self.pathExtension = pathExtension
           self.snapshot = snapshot
+        }
+
+        public init() where A: Snapshottable , Format: Diffable, A.Format == Format {
+          self.diffable = .init()
+          self.pathExtension = {
+            A.pathExtension
+          }
+          self.snapshot = { instance in
+            instance.snapshot
+          }
         }
       }
       """
@@ -237,6 +247,40 @@ final class WitnessedTests: XCTestCase {
               self.data(pullback($0))
             }, from: {
               map(self.from($0))
+            })
+        }
+      }
+      """
+    }
+  }
+
+  func testCombinable() {
+    assertMacro {
+      """
+      @Witnessed([.utilities, .conformanceInit])
+      protocol Combinable {
+        func combine(_ other: Self) -> Self
+      }
+      """
+    } expansion: {
+      """
+      protocol Combinable {
+        func combine(_ other: Self) -> Self
+      }
+
+      struct CombinableWitness<A> {
+        let combine: (A, A) -> A
+        init(combine: @escaping (A, A) -> A) {
+          self.combine = combine
+        }
+        init() where A: Combinable {
+          self.combine = { instance, other in
+            instance.combine(_ : other)
+          }
+        }
+        func transform<B>(pullback: @escaping (B) -> A, map: @escaping (A) -> B) -> CombinableWitness<B> {
+          .init(combine: {
+              map(self.combine(pullback($0), pullback($1)))
             })
         }
       }
