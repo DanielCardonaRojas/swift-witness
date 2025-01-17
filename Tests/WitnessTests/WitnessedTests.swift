@@ -35,9 +35,11 @@ final class WitnessedTests: XCTestCase {
 
       public struct ComparableWitness<A> {
         public let compare: (A, A) -> Bool
+
         public init(compare: @escaping (A, A) -> Bool) {
           self.compare = compare
         }
+
         public func transform<B>(pullback: @escaping (B) -> A) -> ComparableWitness<B> {
           .init(compare: {
               self.compare(pullback($0), pullback($1))
@@ -93,9 +95,11 @@ final class WitnessedTests: XCTestCase {
 
       public struct ComparableWitness<A> {
         public let compare: (A, A) -> Bool
+
         public init(compare: @escaping (A, A) -> Bool) {
           self.compare = compare
         }
+
         public func transform<B>(pullback: @escaping (B) -> A) -> ComparableWitness<B> {
           .init(compare: {
               self.compare(pullback($0), pullback($1))
@@ -128,6 +132,7 @@ final class WitnessedTests: XCTestCase {
         public let diff: (A, A) -> (String, [String])?
         public let data: (A) -> Data
         public let from: (Data) -> A
+
         public init(diff: @escaping (A, A) -> (String, [String])?, data: @escaping (A) -> Data , from: @escaping (Data) -> A) {
           self.diff = diff
           self.data = data
@@ -160,6 +165,7 @@ final class WitnessedTests: XCTestCase {
         public let diffable: DiffableWitness<Format>
         public let pathExtension: () -> String
         public let snapshot: (A) -> Format
+
         public init(diffable: DiffableWitness<Format>, pathExtension: @escaping () -> String , snapshot: @escaping (A) -> Format ) {
           self.diffable = diffable
           self.pathExtension = pathExtension
@@ -169,6 +175,73 @@ final class WitnessedTests: XCTestCase {
       """
     }
 
+  }
+
+  func testTogglable() {
+    assertMacro {
+      """
+      @Witnessed()
+      protocol Togglable {
+        mutating func toggle()
+      }
+      """
+    } expansion: {
+      """
+      protocol Togglable {
+        mutating func toggle()
+      }
+
+      struct TogglableWitness<A> {
+        let toggle: (inout A) -> Void
+        init(toggle: @escaping (inout A) -> Void) {
+          self.toggle = toggle
+        }
+      }
+      """
+    }
+  }
+
+  func testDiffableWithUtilities() {
+    assertMacro {
+      """
+      @Witnessed([.utilities])
+      public protocol Diffable {
+        static func diff(old: Self, new: Self) -> (String, [String])?
+        var data: Data { get }
+        static func from(data: Data) -> Self
+      }
+      """
+    } expansion: {
+      """
+      public protocol Diffable {
+        static func diff(old: Self, new: Self) -> (String, [String])?
+        var data: Data { get }
+        static func from(data: Data) -> Self
+      }
+
+      public struct DiffableWitness<A> {
+        public let diff: (A, A) -> (String, [String])?
+        public let data: (A) -> Data
+        public let from: (Data) -> A
+
+        public init(diff: @escaping (A, A) -> (String, [String])?, data: @escaping (A) -> Data , from: @escaping (Data) -> A) {
+          self.diff = diff
+          self.data = data
+          self.from = from
+        }
+
+        public func transform<B>(pullback: @escaping (B) -> A, map: @escaping (A) -> B) -> DiffableWitness<B> {
+          .init(diff: {
+              self.diff(pullback($0), pullback($1))
+            }, data: {
+              self.data(pullback($0))
+            }, from: {
+              map(self.from($0))
+            })
+        }
+      }
+      """
+    }
   }
 
 }
