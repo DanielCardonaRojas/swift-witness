@@ -108,10 +108,16 @@ public enum WitnessGenerator {
 
   /// Generates a variable for other witness dependencies
   /// If an associated type is constrained to another protocol then we must have a witness for that protocol as well. This method will create such variable.
-  static private func witnessVariableDecl(_ name: String, genericTypeName: String? = nil) -> VariableDeclSyntax {
+  static private func witnessVariableDecl(
+    _ name: String,
+    genericTypeName: String? = nil,
+    accessModifier: DeclModifierSyntax?
+  ) -> VariableDeclSyntax {
     VariableDeclSyntax(
       modifiers: .init(itemsBuilder: {
-        DeclModifierSyntax(name: .keyword(.public))
+        if let accessModifier {
+          accessModifier
+        }
       }),
       bindingSpecifier: .keyword(.let),
       bindings: PatternBindingListSyntax(
@@ -182,7 +188,11 @@ public enum WitnessGenerator {
         }
 
         return MemberBlockItemSyntax(
-          decl: witnessVariableDecl(identifierType.name.text, genericTypeName: associatedTypeDecl.name.text)
+          decl: witnessVariableDecl(
+            identifierType.name.text,
+            genericTypeName: associatedTypeDecl.name.text,
+            accessModifier: accessModifier
+          )
         )
       }
     }
