@@ -20,6 +20,7 @@ extension WitnessGenerator {
     return initializers
   }
 
+  /// Initializer that intakes closures 
   static func witnessDefaultInit(_ protocolDecl: ProtocolDeclSyntax) -> InitializerDeclSyntax {
     .init(
       modifiers: .init(itemsBuilder: {
@@ -45,6 +46,7 @@ extension WitnessGenerator {
     )
   }
 
+  /// Initializers that converts a normal protcol conformance and converts  it into a witness struct.
   static func witnessConformanceInit(_ protocolDecl: ProtocolDeclSyntax) -> InitializerDeclSyntax {
     // init() where Self: <Protocol>, AssociatedType: <Constraint> ...
     .init(

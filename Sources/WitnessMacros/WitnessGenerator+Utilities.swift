@@ -125,21 +125,40 @@ extension WitnessGenerator {
   }
 
   /// Groups a collection of declarations and separates them with a new line as well as adding an optional header comment
-  static func groupedDeclarations(_ items: [MemberBlockItemSyntax], comment: String? = nil) -> [MemberBlockItemSyntax] {
+  static func groupedDeclarations(
+    _ items: [MemberBlockItemSyntax],
+    comment: String? = nil,
+    separated: Bool = false
+  ) -> [MemberBlockItemSyntax] {
     let count = items.count
-    return items.enumerated().map { (index, member) in
-      if index == 0, let comment {
-        member
-          .with(\.leadingTrivia, .lineComment("// \(comment)") + .newline)
-      }
-      else if index == count - 1 {
-        member
-          .with(\.trailingTrivia, .newline)
-      }
-      else {
-        member
-      }
+    var updatedItems = [MemberBlockItemSyntax]()
+
+    for (index, member) in items.enumerated() {
+      let item = member
+        .withTrivia(
+          lineBreak: separated || index == count - 1,
+          comment: index == 0 ? comment : nil
+        )
+
+      updatedItems.append(item)
     }
+
+    return updatedItems
   }
 
+}
+
+extension MemberBlockItemSyntax {
+  func withTrivia(lineBreak: Bool = false, comment: String? = nil) -> MemberBlockItemSyntax {
+    var item = self
+    if lineBreak {
+      item = item.with(\.trailingTrivia, .newline)
+    }
+
+    if let comment {
+      item = item.with(\.leadingTrivia, .lineComment(comment) + .newline)
+    }
+
+    return item
+  }
 }

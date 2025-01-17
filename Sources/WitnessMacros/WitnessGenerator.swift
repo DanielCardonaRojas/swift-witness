@@ -43,7 +43,7 @@ public enum WitnessGenerator {
           }
 
           // Initializers
-          for member in groupedDeclarations(witnessInitializers(protocolDecl)) {
+          for member in groupedDeclarations(witnessInitializers(protocolDecl), separated: true) {
             member
           }
 
