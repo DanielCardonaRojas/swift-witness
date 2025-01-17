@@ -106,24 +106,6 @@ public enum WitnessGenerator {
     return requirementsArray
   }
 
-  // TODO: Use or remove this
-  static private func witnessDependencies(protocolDecl: ProtocolDeclSyntax) -> [MemberBlockItemSyntax] {
-    guard let inheritedTypes = protocolDecl.inheritanceClause?.inheritedTypes else {
-      return []
-    }
-
-    return inheritedTypes.compactMap { inheritedType in
-      guard let identifierType = inheritedType.type.as(IdentifierTypeSyntax.self) else {
-        return nil
-      }
-
-      return MemberBlockItemSyntax(
-        decl: witnessVariableDecl(identifierType.name.text)
-      )
-    }
-
-  }
-
   /// Generates a variable for other witness dependencies
   /// If an associated type is constrained to another protocol then we must have a witness for that protocol as well. This method will create such variable.
   static private func witnessVariableDecl(_ name: String, genericTypeName: String? = nil) -> VariableDeclSyntax {
