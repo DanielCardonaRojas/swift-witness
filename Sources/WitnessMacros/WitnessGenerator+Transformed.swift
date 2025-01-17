@@ -17,19 +17,17 @@ extension WitnessGenerator {
     // The name of the witness struct we generated, e.g., `CombinableWitness`.
     let witnessName = witnessStructName(protocolDecl) // e.g. "CombinableWitness"
 
-    var member: MemberBlockItemSyntax?
+    let semantics = transformSemantics(from: variances)
 
-    // If we detect `.invariant` or a mix of covariant+contravariant, we typically want `iso`.
-    if variances.contains(.invariant) ||
-       (variances.contains(.contravariant) && variances.contains(.covariant)) {
-      member = MemberBlockItemSyntax(decl: transformedWitness(semantic: .iso, protocolDecl: protocolDecl, witnessName: witnessName))
-    } else {
-      // If strictly contravariant => generate pullback
-      if variances.contains(.contravariant) {
-        member = MemberBlockItemSyntax(decl: transformedWitness(semantic: .pullback, protocolDecl: protocolDecl, witnessName: witnessName))
-      } else if variances.contains(.covariant) { // If strictly covariant => generate map
-        member = MemberBlockItemSyntax(decl: transformedWitness(semantic: .map, protocolDecl: protocolDecl, witnessName: witnessName))
-      }
+    var member: MemberBlockItemSyntax?
+    if let semantics {
+      member = MemberBlockItemSyntax(
+        decl: transformedWitness(
+          semantic: semantics,
+          protocolDecl: protocolDecl,
+          witnessName: witnessName
+        )
+      )
     }
     return member
   }
@@ -404,6 +402,23 @@ extension WitnessGenerator {
         )
       }
     )
+  }
+
+  static func transformSemantics(from variances: Set<Variance>) -> TransformedWitnessSemantic? {
+    if variances.isSuperset(of: [.contravariant, .covariant]) {
+      return .iso
+    }
+
+    if variances.contains(.contravariant) {
+      return .pullback
+    }
+
+    if variances.contains(.covariant) {
+      return .map
+    }
+
+    return nil
+
   }
 
   /// **Core method**: Determines the variance of a function signature by checking
