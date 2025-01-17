@@ -124,4 +124,22 @@ extension WitnessGenerator {
     return attribute != nil
   }
 
+  /// Groups a collection of declarations and separates them with a new line as well as adding an optional header comment
+  static func groupedDeclarations(_ items: [MemberBlockItemSyntax], comment: String? = nil) -> [MemberBlockItemSyntax] {
+    let count = items.count
+    return items.enumerated().map { (index, member) in
+      if index == 0, let comment {
+        member
+          .with(\.leadingTrivia, .lineComment("// \(comment)") + .newline)
+      }
+      else if index == count - 1 {
+        member
+          .with(\.trailingTrivia, .newline)
+      }
+      else {
+        member
+      }
+    }
+  }
+
 }
