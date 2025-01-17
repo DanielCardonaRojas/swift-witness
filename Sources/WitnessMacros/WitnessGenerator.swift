@@ -37,26 +37,14 @@ public enum WitnessGenerator {
       genericParameterClause: genericParameterClause(protocolDecl),
       memberBlock: MemberBlockSyntax(
         members: MemberBlockItemListSyntax(itemsBuilder: {
-          // Properties for other witness dependencies
-          if let inheritedTypes = protocolDecl.inheritanceClause?.inheritedTypes {
-            for inheritedType in inheritedTypes {
-              if let identifierType = inheritedType.type.as(IdentifierTypeSyntax.self) {
-                MemberBlockItemSyntax(
-                  decl: witnessVariableDecl(identifierType.name.text)
-                )
-              }
-            }
-          }
-
-          // Closure properties for method requirements
-          for member in convertedProtocolRequirements {
+          // Closure properties for method and variable requirements
+          for member in groupedDeclarations(convertedProtocolRequirements)  {
             member
           }
 
           // Initializers
-          witnessDefaultInit(protocolDecl)
-          if containsOption(.conformanceInit, protocolDecl: protocolDecl) {
-            witnessConformanceInit(protocolDecl)
+          for member in groupedDeclarations(witnessInitializers(protocolDecl)) {
+            member
           }
 
           // Utilities
@@ -116,6 +104,24 @@ public enum WitnessGenerator {
     })
 
     return requirementsArray
+  }
+
+  // TODO: Use or remove this
+  static private func witnessDependencies(protocolDecl: ProtocolDeclSyntax) -> [MemberBlockItemSyntax] {
+    guard let inheritedTypes = protocolDecl.inheritanceClause?.inheritedTypes else {
+      return []
+    }
+
+    return inheritedTypes.compactMap { inheritedType in
+      guard let identifierType = inheritedType.type.as(IdentifierTypeSyntax.self) else {
+        return nil
+      }
+
+      return MemberBlockItemSyntax(
+        decl: witnessVariableDecl(identifierType.name.text)
+      )
+    }
+
   }
 
   /// Generates a variable for other witness dependencies

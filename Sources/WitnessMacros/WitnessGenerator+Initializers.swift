@@ -10,6 +10,16 @@ import SwiftSyntaxBuilder
 
 /// Generates initializers for the witness
 extension WitnessGenerator {
+
+  static func witnessInitializers(_ protocolDecl: ProtocolDeclSyntax) -> [MemberBlockItemSyntax] {
+    var initializers = [MemberBlockItemSyntax]()
+    initializers.append(MemberBlockItemSyntax(decl: witnessDefaultInit(protocolDecl)))
+    if containsOption(.conformanceInit, protocolDecl: protocolDecl) {
+      initializers.append(MemberBlockItemSyntax(decl: witnessConformanceInit(protocolDecl)))
+    }
+    return initializers
+  }
+
   static func witnessDefaultInit(_ protocolDecl: ProtocolDeclSyntax) -> InitializerDeclSyntax {
     .init(
       modifiers: .init(itemsBuilder: {
