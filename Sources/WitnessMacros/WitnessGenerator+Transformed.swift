@@ -59,7 +59,7 @@ extension WitnessGenerator {
   /// ```swift
   /// extension <WitnessName> {
   ///   func transform<B>(
-  ///     _ pullback: @escaping (B) -> A,
+  ///     pullback: @escaping (B) -> A,
   ///     map: @escaping (A) -> B
   ///   ) -> <WitnessName><B> {
   ///     .init(combine: { b1, b2 in
@@ -91,7 +91,7 @@ extension WitnessGenerator {
         parameterClause: FunctionParameterClauseSyntax {
           // ( _ pullback: @escaping (B) -> A )
           if semantic == .iso || semantic == .pullback {
-            closureParameterTransformType(from: genericLabel, to: "B", name: "pullback")
+            closureParameterTransformType(from: "B", to: genericLabel, name: "pullback")
           }
           // ( map: @escaping (A) -> B )
           if semantic == .iso || semantic == .map {
@@ -114,7 +114,7 @@ extension WitnessGenerator {
     }
   }
 
-  /// Creates a closure type function parameter like: `pullback: @espacing (A) -> B` where `A` is `genericIn` and `B` is `genericOut`
+  /// Creates a closure type function parameter like: `map: @espacing (A) -> B` where `A` is `genericIn` and `B` is `genericOut`
   static func closureParameterTransformType(from genericIn: String, to genericOut: String, name: String) -> FunctionParameterSyntax {
     FunctionParameterSyntax(
       firstName: .identifier(name),
@@ -134,11 +134,11 @@ extension WitnessGenerator {
           FunctionTypeSyntax(
             parameters: TupleTypeElementListSyntax {
               TupleTypeElementSyntax(
-                type: IdentifierTypeSyntax(name: .identifier(genericOut))
+                type: IdentifierTypeSyntax(name: .identifier(genericIn))
               )
             },
             returnClause: ReturnClauseSyntax(
-              type: IdentifierTypeSyntax(name: .identifier(genericIn))
+              type: IdentifierTypeSyntax(name: .identifier(genericOut))
             )
           )
       )
@@ -171,6 +171,12 @@ extension WitnessGenerator {
     return GenericArgumentClauseSyntax(arguments: parameters)
   }
 
+  /// Creates the new instance with transformed witness 
+  /// ```swift
+  /// .init(combine: { b1, b2 in
+  ///   map(self.combine(pullback(b1), pullback(b2)))
+  /// })
+  /// ```
   static func transformedInstance(_ protocolDecl: ProtocolDeclSyntax) -> FunctionCallExprSyntax {
     FunctionCallExprSyntax(
       calledExpression: MemberAccessExprSyntax(
