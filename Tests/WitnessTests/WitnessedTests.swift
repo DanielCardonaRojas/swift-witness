@@ -41,9 +41,11 @@ final class WitnessedTests: XCTestCase {
         }
 
         public func transform<B>(pullback: @escaping (B) -> A) -> ComparableWitness<B> {
-          .init(compare: {
+          .init(
+            compare: {
               self.compare(pullback($0), pullback($1))
-            })
+            }
+          )
         }
       }
       """
@@ -70,9 +72,11 @@ final class WitnessedTests: XCTestCase {
           self.random = random
         }
         func transform<B>(pullback: @escaping (B) -> A) -> RandomNumberGeneratorWitness<B> {
-          .init(random: {
+          .init(
+            random: {
               self.random(pullback($0))
-            })
+            }
+          )
         }
       }
       """
@@ -101,9 +105,11 @@ final class WitnessedTests: XCTestCase {
         }
 
         public func transform<B>(pullback: @escaping (B) -> A) -> ComparableWitness<B> {
-          .init(compare: {
+          .init(
+            compare: {
               self.compare(pullback($0), pullback($1))
-            })
+            }
+          )
         }
       }
       """
@@ -146,7 +152,7 @@ final class WitnessedTests: XCTestCase {
   func testSnapshottable() {
     assertMacro {
       """
-      @Witnessed([.conformanceInit])
+      @Witnessed([.conformanceInit, .utilities])
       public protocol Snapshottable {
         associatedtype Format: Diffable
         static var pathExtension: String { get }
@@ -180,6 +186,18 @@ final class WitnessedTests: XCTestCase {
           self.snapshot = { instance in
             instance.snapshot
           }
+        }
+
+        public func transform<B>(pullback: @escaping (B) -> A, map: @escaping (A) -> B) -> SnapshottableWitness<B, Format> {
+          .init(
+            diffable: self.diffable,
+            pathExtension: {
+              self.pathExtension()
+            },
+            snapshot: {
+              self.snapshot(pullback($0))
+            }
+          )
         }
       }
       """
@@ -241,13 +259,17 @@ final class WitnessedTests: XCTestCase {
         }
 
         public func transform<B>(pullback: @escaping (B) -> A, map: @escaping (A) -> B) -> DiffableWitness<B> {
-          .init(diff: {
+          .init(
+            diff: {
               self.diff(pullback($0), pullback($1))
-            }, data: {
+            },
+            data: {
               self.data(pullback($0))
-            }, from: {
+            },
+            from: {
               map(self.from($0))
-            })
+            }
+          )
         }
       }
       """
@@ -279,9 +301,11 @@ final class WitnessedTests: XCTestCase {
           }
         }
         func transform<B>(pullback: @escaping (B) -> A, map: @escaping (A) -> B) -> CombinableWitness<B> {
-          .init(combine: {
+          .init(
+            combine: {
               map(self.combine(pullback($0), pullback($1)))
-            })
+            }
+          )
         }
       }
       """
