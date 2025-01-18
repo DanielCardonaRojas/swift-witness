@@ -256,10 +256,18 @@ extension WitnessGenerator {
       }
 })
 
-    return .init(parametersBuilder: {
-      for param in parameters {
-        param
+    return .init(
+      parametersBuilder: {
+        for (index, param) in parameters.enumerated() {
+          if index == parameters.count - 1 {
+            param
+              .with(\.leadingTrivia, .newline)
+              .with(\.trailingTrivia, .newline)
+          } else {
+            param.with(\.leadingTrivia, .newline)
+          }
+        }
       }
-    })
+    )
   }
 }

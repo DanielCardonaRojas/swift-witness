@@ -36,7 +36,9 @@ final class WitnessedTests: XCTestCase {
       public struct ComparableWitness<A> {
         public let compare: (A, A) -> Bool
 
-        public init(compare: @escaping (A, A) -> Bool) {
+        public init(
+          compare: @escaping (A, A) -> Bool
+        ) {
           self.compare = compare
         }
 
@@ -68,7 +70,9 @@ final class WitnessedTests: XCTestCase {
 
       struct RandomNumberGeneratorWitness<A> {
         let random: (A) -> Double
-        init(random: @escaping (A) -> Double) {
+        init(
+          random: @escaping (A) -> Double
+        ) {
           self.random = random
         }
         func transform<B>(pullback: @escaping (B) -> A) -> RandomNumberGeneratorWitness<B> {
@@ -100,7 +104,9 @@ final class WitnessedTests: XCTestCase {
       public struct ComparableWitness<A> {
         public let compare: (A, A) -> Bool
 
-        public init(compare: @escaping (A, A) -> Bool) {
+        public init(
+          compare: @escaping (A, A) -> Bool
+        ) {
           self.compare = compare
         }
 
@@ -139,7 +145,11 @@ final class WitnessedTests: XCTestCase {
         public let data: (A) -> Data
         public let from: (Data) -> A
 
-        public init(diff: @escaping (A, A) -> (String, [String])?, data: @escaping (A) -> Data , from: @escaping (Data) -> A) {
+        public init(
+          diff: @escaping (A, A) -> (String, [String])?,
+          data: @escaping (A) -> Data ,
+          from: @escaping (Data) -> A
+        ) {
           self.diff = diff
           self.data = data
           self.from = from
@@ -172,7 +182,11 @@ final class WitnessedTests: XCTestCase {
         public let pathExtension: () -> String
         public let snapshot: (A) -> Format
 
-        public init(diffable: DiffableWitness<Format>, pathExtension: @escaping () -> String , snapshot: @escaping (A) -> Format ) {
+        public init(
+          diffable: DiffableWitness<Format>,
+          pathExtension: @escaping () -> String ,
+          snapshot: @escaping (A) -> Format
+        ) {
           self.diffable = diffable
           self.pathExtension = pathExtension
           self.snapshot = snapshot
@@ -221,7 +235,9 @@ final class WitnessedTests: XCTestCase {
 
       struct TogglableWitness<A> {
         let toggle: (inout A) -> Void
-        init(toggle: @escaping (inout A) -> Void) {
+        init(
+          toggle: @escaping (inout A) -> Void
+        ) {
           self.toggle = toggle
         }
       }
@@ -252,7 +268,11 @@ final class WitnessedTests: XCTestCase {
         public let data: (A) -> Data
         public let from: (Data) -> A
 
-        public init(diff: @escaping (A, A) -> (String, [String])?, data: @escaping (A) -> Data , from: @escaping (Data) -> A) {
+        public init(
+          diff: @escaping (A, A) -> (String, [String])?,
+          data: @escaping (A) -> Data ,
+          from: @escaping (Data) -> A
+        ) {
           self.diff = diff
           self.data = data
           self.from = from
@@ -292,7 +312,9 @@ final class WitnessedTests: XCTestCase {
 
       struct CombinableWitness<A> {
         let combine: (A, A) -> A
-        init(combine: @escaping (A, A) -> A) {
+        init(
+          combine: @escaping (A, A) -> A
+        ) {
           self.combine = combine
         }
         init() where A: Combinable {
