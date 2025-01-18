@@ -5,14 +5,6 @@
 //  Created by Daniel Cardona on 28/03/24.
 //
 
-extension Combining where A: Combinable {
-  init() {
-    self.combine = { this, other in
-      this.combine(other)
-    }
-  }
-}
-
 extension Combining where A: Numeric {
   static var sum: Combining {
     return Combining { $0 + $1 }
