@@ -188,33 +188,67 @@ extension WitnessGenerator {
           argument
         }
       }),
-      rightParen: .rightParenToken()
+      rightParen: .rightParenToken().with(\.leadingTrivia, .newline)
     )
 
   }
 
+  /// Argument to initializer
+  ///
+  /// ```swift
+  /// .init(
+  ///    combine: { // Closure expression }  // <- Generate this
+  ///  )
+  /// ```
   static func constructorArguments(_ protocolDecl: ProtocolDeclSyntax) -> [LabeledExprSyntax] {
     protocolDecl.memberBlock.members
-      .compactMap(
-{
-        if let functionDecl = $0.decl.as(FunctionDeclSyntax.self) {
-          return LabeledExprSyntax(
+      .flatMap(
+{ (member: MemberBlockItemSyntax) -> [LabeledExprSyntax] in
+        if let functionDecl = member.decl.as(FunctionDeclSyntax.self) {
+          return [LabeledExprSyntax(
             label: functionDecl.name,
             colon: .colonToken(),
             expression: transformedClosure(functionDecl, protocolDecl: protocolDecl)
-          )
+          ).with(\.leadingTrivia, .newline)]
         }
-
-        if let variableDecl = $0.decl.as(VariableDeclSyntax.self),
+        else if let variableDecl = member.decl.as(VariableDeclSyntax.self),
            let identifier = variableDecl.bindings.first?.pattern.as(IdentifierPatternSyntax.self) {
-          return LabeledExprSyntax(
+          return [LabeledExprSyntax(
             label: identifier.identifier,
             colon: .colonToken(),
             expression: transformedVariableClosure(variableDecl, protocolDecl: protocolDecl)
+          ).with(\.leadingTrivia, .newline)]
+        }
+        else if let associatedTypeDecl = member.decl.as(AssociatedTypeDeclSyntax.self) {
+          // For example diffable = self.diffable where diffable: DiffableWitness<Format>
+          let inheritedTypes = (
+            associatedTypeDecl.inheritanceClause?.inheritedTypes ?? []
           )
+
+
+          let witnessDependenciesAssignments: [LabeledExprSyntax?] = inheritedTypes.map { inheritedType in
+            guard let identifierType = inheritedType.type.as(IdentifierTypeSyntax.self) else {
+              return nil
+            }
+
+            let witnessVariableName = identifierType.name.text.lowercaseFirst()
+
+            return LabeledExprSyntax(
+              label: .identifier(witnessVariableName),
+              colon: .colonToken(),
+              expression: MemberAccessExprSyntax(
+                base: DeclReferenceExprSyntax(baseName: .identifier("self")),
+                declName: DeclReferenceExprSyntax(baseName: .identifier(witnessVariableName))
+              )
+            ).with(\.leadingTrivia, .newline)
+
+          }
+
+          return witnessDependenciesAssignments.compactMap({ $0 })
+
         }
 
-        return nil
+        return []
       })
   }
 
@@ -421,6 +455,42 @@ extension WitnessGenerator {
 
   }
 
+  static func variance(
+    variableDecl: VariableDeclSyntax,
+      generics: [GenericParameterSyntax]
+  ) -> Set<Variance> {
+    var declaredGenericNames = Set(generics.map { $0.name.text })
+    declaredGenericNames.insert("Self")
+    var genericsInParams = Set<String>()
+
+    if !variableDecl.isModifiedWith(.static) {
+      genericsInParams.insert("Self")
+    }
+
+
+    var genericsInReturn = Set<String>()
+    if let variableType = variableDecl.bindings.first?.typeAnnotation?.type {
+        let collector = GenericNameCollector(declaredGenerics: declaredGenericNames)
+        collector.walk(variableType)
+        genericsInReturn.formUnion(collector.foundGenerics)
+    }
+
+    var variances = Set<Variance>()
+
+    if !genericsInReturn.isEmpty {
+      variances.insert(.covariant)
+    }
+
+    if !genericsInParams.isEmpty {
+      variances.insert(.contravariant)
+    }
+
+    if genericsInParams.isEmpty && genericsInReturn.isEmpty {
+      variances.insert(.invariant)
+    }
+
+    return variances
+  }
   /// **Core method**: Determines the variance of a function signature by checking
   /// how the generic parameters are used in the function's parameter list (input)
   /// and return type (output).
@@ -508,10 +578,14 @@ extension WitnessGenerator {
   static func witnessStructVariance(_ protocolDecl: ProtocolDeclSyntax) -> Set<Variance> {
     let generics = associatedTypeToGenericParam(protocolDecl, primary: nil)
     let variances: [Variance] = protocolDecl.memberBlock.members.flatMap { member in
-      guard let functionDecl = member.decl.as(FunctionDeclSyntax.self) else {
-        return Set<Variance>()
+      if let functionDecl = member.decl.as(FunctionDeclSyntax.self) {
+        return variance(functionDecl: functionDecl, generics: generics)
       }
-      return variance(functionDecl: functionDecl, generics: generics)
+      if let variableDecl = member.decl.as(VariableDeclSyntax.self) {
+        return variance(variableDecl: variableDecl, generics: generics)
+      }
+
+      return Set<Variance>()
     }
 
     return Set(variances)
