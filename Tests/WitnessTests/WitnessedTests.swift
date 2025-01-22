@@ -349,4 +349,47 @@ final class WitnessedTests: XCTestCase {
     }
   }
 
+  func testConvertible() {
+    assertMacro {
+      """
+      @Witnessed([.utilities, .conformanceInit])
+      protocol Convertible {
+        associatedtype To
+        func convert() -> To
+      }
+      """
+    } expansion: {
+      """
+      protocol Convertible {
+        associatedtype To
+        func convert() -> To
+      }
+
+      struct ConvertibleWitness<A, To> {
+        let convert: (A) -> To
+        init(
+          convert: @escaping (A) -> To
+        ) {
+          self.convert = convert
+        }
+        init() where A: Convertible , A.To == To {
+          self.convert = { instance in
+            instance.convert()
+          }
+        }
+        func transform<B>(
+          pullback: @escaping (B) -> A,
+          map: @escaping (A) -> B
+        ) -> ConvertibleWitness<B, To> {
+          .init(
+            convert: {
+              self.convert(pullback($0))
+            }
+          )
+        }
+      }
+      """
+    }
+  }
+
 }

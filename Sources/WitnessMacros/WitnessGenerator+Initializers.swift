@@ -72,7 +72,7 @@ extension WitnessGenerator {
               )
             )
 
-            // Constraints for associated types
+            /// Constraints for associated types. For example `A: Snapshottable`
             for associatedType in associatedTypes(protocolDecl) {
               if let constraints = associatedType.inheritanceClause?.inheritedTypes {
                 for constraint in constraints {
@@ -86,20 +86,22 @@ extension WitnessGenerator {
                       )
                     )
 
-                    GenericRequirementSyntax(
-                      requirement: .sameTypeRequirement(
-                        .init(
-                          leftType: IdentifierTypeSyntax(
-                            name: .identifier("\(Self.genericLabel).\(associatedType.name.text)")
-                          ),
-                          equal: .binaryOperator("=="),
-                          rightType: IdentifierTypeSyntax(name: associatedType.name)
-                        )
-                      )
-                    )
                   }
                 }
               }
+
+              /// For example: `A.Format == Format`
+              GenericRequirementSyntax(
+                requirement: .sameTypeRequirement(
+                  .init(
+                    leftType: IdentifierTypeSyntax(
+                      name: .identifier("\(Self.genericLabel).\(associatedType.name.text)")
+                    ),
+                    equal: .binaryOperator("=="),
+                    rightType: IdentifierTypeSyntax(name: associatedType.name)
+                  )
+                )
+              )
             }
           }
         )
