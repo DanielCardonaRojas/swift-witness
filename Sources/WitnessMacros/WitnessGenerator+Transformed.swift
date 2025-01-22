@@ -396,7 +396,7 @@ extension WitnessGenerator {
 
     let variance = variance(
       functionDecl: functionDecl,
-      generics: generics
+      generics: [] // TODO: Consider associated types for more complicated generic structs
     )
 
     // If contains Self in the return type then map the return value
