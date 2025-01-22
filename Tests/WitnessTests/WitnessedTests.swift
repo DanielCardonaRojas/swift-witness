@@ -42,7 +42,9 @@ final class WitnessedTests: XCTestCase {
           self.compare = compare
         }
 
-        public func transform<B>(pullback: @escaping (B) -> A) -> ComparableWitness<B> {
+        public func transform<B>(
+          pullback: @escaping (B) -> A
+        ) -> ComparableWitness<B> {
           .init(
             compare: {
               self.compare(pullback($0), pullback($1))
@@ -75,7 +77,9 @@ final class WitnessedTests: XCTestCase {
         ) {
           self.random = random
         }
-        func transform<B>(pullback: @escaping (B) -> A) -> RandomNumberGeneratorWitness<B> {
+        func transform<B>(
+          pullback: @escaping (B) -> A
+        ) -> RandomNumberGeneratorWitness<B> {
           .init(
             random: {
               self.random(pullback($0))
@@ -110,7 +114,9 @@ final class WitnessedTests: XCTestCase {
           self.compare = compare
         }
 
-        public func transform<B>(pullback: @escaping (B) -> A) -> ComparableWitness<B> {
+        public func transform<B>(
+          pullback: @escaping (B) -> A
+        ) -> ComparableWitness<B> {
           .init(
             compare: {
               self.compare(pullback($0), pullback($1))
@@ -202,7 +208,10 @@ final class WitnessedTests: XCTestCase {
           }
         }
 
-        public func transform<B>(pullback: @escaping (B) -> A, map: @escaping (A) -> B) -> SnapshottableWitness<B, Format> {
+        public func transform<B>(
+          pullback: @escaping (B) -> A,
+          map: @escaping (A) -> B
+        ) -> SnapshottableWitness<B, Format> {
           .init(
             diffable: self.diffable,
             pathExtension: {
@@ -278,7 +287,10 @@ final class WitnessedTests: XCTestCase {
           self.from = from
         }
 
-        public func transform<B>(pullback: @escaping (B) -> A, map: @escaping (A) -> B) -> DiffableWitness<B> {
+        public func transform<B>(
+          pullback: @escaping (B) -> A,
+          map: @escaping (A) -> B
+        ) -> DiffableWitness<B> {
           .init(
             diff: {
               self.diff(pullback($0), pullback($1))
@@ -322,7 +334,10 @@ final class WitnessedTests: XCTestCase {
             instance.combine(_ : other)
           }
         }
-        func transform<B>(pullback: @escaping (B) -> A, map: @escaping (A) -> B) -> CombinableWitness<B> {
+        func transform<B>(
+          pullback: @escaping (B) -> A,
+          map: @escaping (A) -> B
+        ) -> CombinableWitness<B> {
           .init(
             combine: {
               map(self.combine(pullback($0), pullback($1)))

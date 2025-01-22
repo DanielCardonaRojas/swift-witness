@@ -86,16 +86,19 @@ extension WitnessGenerator {
         }
       ),
       signature: FunctionSignatureSyntax(
-        parameterClause: FunctionParameterClauseSyntax {
-          // ( _ pullback: @escaping (B) -> A )
-          if semantic == .iso || semantic == .pullback {
-            closureParameterTransformType(from: "B", to: genericLabel, name: "pullback")
+        parameterClause: FunctionParameterClauseSyntax(
+          rightParen: .rightParenToken().with(\.leadingTrivia, .newline),
+          parametersBuilder: {
+            // ( _ pullback: @escaping (B) -> A )
+            if semantic == .iso || semantic == .pullback {
+              closureParameterTransformType(from: "B", to: genericLabel, name: "pullback")
+            }
+            // ( map: @escaping (A) -> B )
+            if semantic == .iso || semantic == .map {
+              closureParameterTransformType(from: genericLabel, to: "B", name: "map")
+            }
           }
-          // ( map: @escaping (A) -> B )
-          if semantic == .iso || semantic == .map {
-            closureParameterTransformType(from: genericLabel, to: "B", name: "map")
-          }
-        },
+        ),
         returnClause: ReturnClauseSyntax(
           type: TypeSyntax(
             genericType(
@@ -140,7 +143,7 @@ extension WitnessGenerator {
             )
           )
       )
-    )
+    ).with(\.leadingTrivia, .newline)
   }
 
   static func transformGenericArgumentClause(
