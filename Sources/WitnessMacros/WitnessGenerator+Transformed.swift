@@ -322,7 +322,7 @@ extension WitnessGenerator {
                   arguments: .init(
                     itemsBuilder: {
                       LabeledExprSyntax(expression: closureCall)
-                      }
+                    }
                   ),
                   rightParen: .rightParenToken()
                 )
@@ -579,7 +579,8 @@ extension WitnessGenerator {
   /// if the set contains covariant and not contravariant then a map is required
   /// if the set contains a contravariant and not a covariant then a pullback is required
   static func witnessStructVariance(_ protocolDecl: ProtocolDeclSyntax) -> Set<Variance> {
-    let generics = associatedTypeToGenericParam(protocolDecl, primary: nil)
+    // TODO: Consider associated types
+    let generics: [GenericParameterSyntax] = [] //associatedTypeToGenericParam(protocolDecl, primary: nil)
     let variances: [Variance] = protocolDecl.memberBlock.members.flatMap { member in
       if let functionDecl = member.decl.as(FunctionDeclSyntax.self) {
         return variance(functionDecl: functionDecl, generics: generics)

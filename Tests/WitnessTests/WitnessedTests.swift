@@ -209,8 +209,7 @@ final class WitnessedTests: XCTestCase {
         }
 
         public func transform<B>(
-          pullback: @escaping (B) -> A,
-          map: @escaping (A) -> B
+          pullback: @escaping (B) -> A
         ) -> SnapshottableWitness<B, Format> {
           .init(
             diffable: self.diffable,
@@ -378,8 +377,7 @@ final class WitnessedTests: XCTestCase {
           }
         }
         func transform<B>(
-          pullback: @escaping (B) -> A,
-          map: @escaping (A) -> B
+          pullback: @escaping (B) -> A
         ) -> ConvertibleWitness<B, To> {
           .init(
             convert: {
