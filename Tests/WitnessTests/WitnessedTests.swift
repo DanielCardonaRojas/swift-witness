@@ -390,4 +390,30 @@ final class WitnessedTests: XCTestCase {
     }
   }
 
+  func testSubscript() {
+    assertMacro {
+    """
+    @Witnessed()
+    protocol BoolIndexed {
+      subscript (_ value: Bool) -> Bool { get }
+    }
+    """
+    } expansion: {
+      """
+      protocol BoolIndexed {
+        subscript (_ value: Bool) -> Bool { get }
+      }
+
+      struct BoolIndexedWitness<A> {
+        let indexedBy: (A, Bool) -> Bool
+        init(
+          indexedBy: @escaping (A, Bool) -> Bool
+        ) {
+          self.indexedBy = indexedBy
+        }
+      }
+      """
+    }
+  }
+
 }

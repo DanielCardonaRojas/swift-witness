@@ -80,6 +80,16 @@ public enum WitnessGenerator {
         )]
       }
 
+        if let subscriptDecl = decl.as(SubscriptDeclSyntax.self) {
+          let parameters = subscriptDecl.parameterClause.parameters.map({ $0 })
+          return [(
+            name: .init(stringLiteral: "indexedBy"),
+            static: subscriptDecl.isModifiedWith(.static),
+            kind: .function,
+            parameters: parameters
+          )]
+        }
+
       if let variableDecl = decl.as(VariableDeclSyntax.self),
           let identifier = variableDecl.bindings.first?.pattern.as(IdentifierPatternSyntax.self) {
         return [(identifier.identifier, variableDecl.isModifiedWith(.static), .variable, [])]
@@ -195,6 +205,29 @@ public enum WitnessGenerator {
           )
         )
       }
+    } else if let subscriptDecl = decl.as(SubscriptDeclSyntax.self) {
+      return MemberBlockItemSyntax(
+        decl: VariableDeclSyntax(
+          modifiers: .init(itemsBuilder: {
+            if let accessModifier {
+              accessModifier
+            }
+          }),
+          bindingSpecifier: .keyword(.let),
+          bindings: PatternBindingListSyntax(
+            itemsBuilder: {
+              PatternBindingListSyntax.Element(
+                pattern: IdentifierPatternSyntax(
+                  identifier: .init(stringLiteral: "indexedBy")
+                ),
+                typeAnnotation: TypeAnnotationSyntax(
+                  type: subscriptRequirementWitnessType(subscriptDecl))
+              )
+            }
+          )
+        )
+      )
+
     }
 
     return nil
@@ -242,6 +275,32 @@ public enum WitnessGenerator {
       effectSpecifiers: functionDecl.signature.effectSpecifiers?.typeEffectSpecifiers(),
       returnClause: ReturnClauseSyntax(
         type: Self.replaceSelf(typeSyntax: functionDecl.signature.returnClause?.type ?? TypeSyntax(stringLiteral: "Void"))
+      )
+    )
+  }
+
+  /// The type of the property created when de-protocolizing a protocol subscript requirement
+  static func subscriptRequirementWitnessType(_ functionDecl: SubscriptDeclSyntax) -> FunctionTypeSyntax  {
+    FunctionTypeSyntax(
+      parameters: TupleTypeElementListSyntax(itemsBuilder: {
+        if functionDecl.modifiers.contains(where: { $0.name.text == TokenSyntax.keyword(.static).text}) {
+          //Do not add instance param if method is static
+        } else {
+          // Instance reference
+          selfTupleTypeElement()
+        }
+
+        // Protocol requirement parameters
+        for parameter in functionDecl.parameterClause.parameters {
+          if let identifierType = parameter.type.as(IdentifierTypeSyntax.self), identifierType.name.text == "Self" {
+            selfTupleTypeElement()
+          } else {
+            TupleTypeElementSyntax(type: parameter.type)
+          }
+        }
+      }),
+      returnClause: ReturnClauseSyntax(
+        type: Self.replaceSelf(typeSyntax: functionDecl.returnClause.type)
       )
     )
   }

@@ -220,8 +220,24 @@ extension WitnessGenerator {
             baseType: functionRequirementWitnessType(functionDecl)
           )
         )]
-      } else if let variableDecl = decl.as(VariableDeclSyntax.self),
-                let identifier = variableDecl.bindings.first?.pattern.as(IdentifierPatternSyntax.self) {
+      }
+      else if let subscriptDecl = decl.as(SubscriptDeclSyntax.self) {
+        return [FunctionParameterSyntax(
+          firstName: .init(stringLiteral: "indexedBy"),
+          type: AttributedTypeSyntax(
+            specifiers: .init(itemsBuilder: {}),
+            attributes: .init(itemsBuilder: {
+              AttributeSyntax(
+                atSign: .atSignToken(),
+                attributeName: IdentifierTypeSyntax(name: .identifier("escaping"))
+              )
+            }),
+            baseType: subscriptRequirementWitnessType(subscriptDecl)
+          )
+        )]
+      }
+      else if let variableDecl = decl.as(VariableDeclSyntax.self),
+          let identifier = variableDecl.bindings.first?.pattern.as(IdentifierPatternSyntax.self) {
         return [FunctionParameterSyntax(
           firstName: identifier.identifier,
           type: AttributedTypeSyntax(

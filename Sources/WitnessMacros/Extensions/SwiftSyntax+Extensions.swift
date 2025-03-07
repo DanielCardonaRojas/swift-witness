@@ -12,6 +12,12 @@ extension FunctionDeclSyntax {
   }
 }
 
+extension SubscriptDeclSyntax {
+  func isModifiedWith(_ keyword: Keyword) -> Bool {
+    modifiers.contains(where: { $0.name.text == TokenSyntax.keyword(keyword).text})
+  }
+}
+
 extension VariableDeclSyntax {
   func isModifiedWith(_ keyword: Keyword) -> Bool {
     modifiers.contains(where: { $0.name.text == TokenSyntax.keyword(keyword).text})
