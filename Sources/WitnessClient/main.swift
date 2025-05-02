@@ -49,3 +49,8 @@ protocol Convertible {
 
 typealias Converting<A, To> = ConvertibleWitness<A, To>
 
+
+@Witnessed()
+protocol BoolIndexed {
+  subscript (_ value: Bool) -> Bool { get }
+}
