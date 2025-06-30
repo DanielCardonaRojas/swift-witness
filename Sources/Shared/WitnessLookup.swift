@@ -15,5 +15,9 @@ public extension WitnessLookUp {
     func witness(for type: String, label: String? = nil) -> WitnessType? {
         table.read(type: type, label: label) as? WitnessType
     }
+
+    func witness<A>(for type: A.Type, label: String? = nil) -> WitnessType? {
+        table.read(type: "\(type)", label: label) as? WitnessType
+    }
 }
 
