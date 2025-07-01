@@ -6,24 +6,30 @@
 //
 
 /// A table storing witnesses by types and strategy
-public struct WitnessTable {
-    public init() { }
+public class WitnessTable {
+    /// The name identifying the types of witnesses stored in the table instance
+    let name: String
+
+    public init(name: String) {
+        self.name = name
+    }
 
     /// A dictionary storing witnesses by type and strategy
     var witnesses: [String: [String: Any]] = [:]
-    func read(type: String, label: String?) -> Any? {
+
+    public func read(type: String, label: String?) -> Any? {
         witnesses[type]?[label ?? "default"]
     }
 
-    func read<T>(type: T.Type, label: String?) -> Any? {
+    public func read<T>(type: T.Type, label: String?) -> Any? {
         witnesses["\(type)"]?[label ?? "default"]
     }
 
-    mutating func write<T>(type: T.Type, label: String?, witness: Any) {
+    public func write<T>(type: T.Type, label: String?, witness: Any) {
         write(type: "\(type)", label: label, witness: witness)
     }
 
-    mutating func write(type: String, label: String?, witness: Any) {
+    public func write(type: String, label: String?, witness: Any) {
         let strategy = label ?? "default"
         if witnesses[type] != nil {
             witnesses[type]?[strategy] = witness
