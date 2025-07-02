@@ -12,7 +12,7 @@ import XCTest
 final class WitnessTableTests: XCTestCase {
 
     func testRegistersWitnessByLabel() {
-        var table = WitnessTable()
+        let table = WitnessTable(name: "Combinable")
         table.write(type: Int.self, label: "sum", witness: Combining<Int>.sum)
         table.write(type: Int.self, label: "prod", witness: Combining<Int>.prod)
         XCTAssertNotNil(table.read(type: Int.self, label: "prod"))
@@ -20,7 +20,7 @@ final class WitnessTableTests: XCTestCase {
     }
 
     func testRegistersUnLabeledWitness() {
-        var table = WitnessTable()
+        let table = WitnessTable(name: "Combinable")
         table.write(type: Int.self, label: nil, witness: Combining<Int>.sum)
         let witness = table.read(type: Int.self, label: nil)
         XCTAssertNotNil(witness)
