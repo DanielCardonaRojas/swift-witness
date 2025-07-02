@@ -27,7 +27,7 @@ public enum WitnessGenerator {
       return nil
     }
 
-    let structDecl = StructDeclSyntax(
+    var structDecl = StructDeclSyntax(
       modifiers: .init(itemsBuilder: {
         if let modifier = accessModifier(protocolDecl) {
           modifier
@@ -53,12 +53,27 @@ public enum WitnessGenerator {
               member
             }
           }
+
+          // ErasableWitness conformance and erased() method
+          if containsOption(.synthesizedConformance, protocolDecl: protocolDecl) {
+            MemberBlockItemSyntax(decl: erasedFunctionDecl(protocolDecl))
+          }
         })
       )
     )
 
+    // Conditionally add ErasableWitness conformance to the struct's inheritance clause
+    if containsOption(.synthesizedConformance, protocolDecl: protocolDecl) {
+        structDecl.inheritanceClause = InheritanceClauseSyntax(
+            inheritedTypes: InheritedTypeListSyntax {
+                InheritedTypeSyntax(type: IdentifierTypeSyntax(name: .identifier("ErasableWitness")))
+            }
+        )
+    }
+
     return [DeclSyntax(structDecl)]
   }
+
 
   static func requirementNames(_ protocolDecl: ProtocolDeclSyntax) -> [TokenSyntax] {
     requirements(protocolDecl).map(\.name)

@@ -19,6 +19,46 @@ final class WitnessedTests: XCTestCase {
     }
   }
 
+    func testErased() {
+        assertMacro {
+            """
+            @Witnessed([.utilities, .synthesizedConformance])
+            protocol PricingService {
+                func price(_ item: String) -> Double
+            }
+          """
+        } expansion: {
+          """
+            protocol PricingService {
+                func price(_ item: String) -> Double
+            }
+
+            struct PricingServiceWitness<A>: ErasableWitness {
+              let price: (A, String) -> Double
+              init(
+                price: @escaping (A, String) -> Double
+              ) {
+                self.price = price
+              }
+              func transform<B>(
+                pullback: @escaping (B) -> A
+              ) -> PricingServiceWitness<B> {
+                .init(
+                  price: {
+                    self.price(pullback($0), $1)
+                  }
+                )
+              }
+              func erased() -> PricingServiceWitness<Any> {
+                transform(pullback: { instance in
+                    instance as! A
+                  })
+              }
+            }
+          """
+        }
+    }
+
   func testComparable() {
     assertMacro {
       """
