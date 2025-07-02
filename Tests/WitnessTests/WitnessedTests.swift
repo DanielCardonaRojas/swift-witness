@@ -22,6 +22,49 @@ final class WitnessedTests: XCTestCase {
     func testErased() {
         assertMacro {
             """
+            @Witnessed([.synthesizedConformance, .utilities])
+            protocol Fake {
+                func fake() -> Self
+            }
+            """
+        } expansion: {
+          """
+          protocol Fake {
+              func fake() -> Self
+          }
+
+          struct FakeWitness<A>: ErasableWitness {
+              let fake: (A) -> A
+              init(
+                  fake: @escaping (A) -> A
+              ) {
+                  self.fake = fake
+              }
+              func transform<B>(
+                  pullback: @escaping (B) -> A,
+                  map: @escaping (A) -> B
+              ) -> FakeWitness<B> {
+                  .init(
+                      fake: {
+                          map(self.fake(pullback($0)))
+                      }
+                  )
+              }
+              func erased() -> FakeWitness<Any> {
+                  transform(pullback: { instance in
+                          instance as! A
+                      }, map: { instance in
+                          instance
+                      })
+              }
+          }
+          """
+        }
+    }
+    
+    func testErasedPullback() {
+        assertMacro {
+            """
             @Witnessed([.utilities, .synthesizedConformance])
             protocol PricingService {
                 func price(_ item: String) -> Double
