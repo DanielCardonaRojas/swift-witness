@@ -16,7 +16,7 @@ public final class WitnessRegistry {
     /// The shared singleton instance of the registry.
     public static let shared = WitnessRegistry()
 
-    private var tables: [String: WitnessTable] = [:]
+    private(set) var tables: [String: WitnessTable] = [:]
     private let lock = NSLock()
 
     // Private initializer to enforce singleton pattern.
@@ -30,10 +30,11 @@ public final class WitnessRegistry {
     /// - Parameter witnessType: The type of the witness for which to get the table (e.g., `MyProtocolWitness.self`).
     /// - Returns: The unique `WitnessTable` instance for the specified type.
     public func table<WitnessType>(for witnessType: WitnessType.Type) -> WitnessTable {
+        let parsedType = MetatypeParser.parse(witnessType)
         lock.lock()
         defer { lock.unlock() }
 
-        let key = String(describing: witnessType)
+        let key = String(describing: parsedType.name)
 
         if let existingTable = tables[key] {
             return existingTable
