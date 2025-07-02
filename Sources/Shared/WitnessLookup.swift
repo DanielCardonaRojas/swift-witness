@@ -25,9 +25,9 @@ public struct WitnessLookUpTable<WitnessType> {
     /// Erased type for the witness. For example `Witness<Any>`
     var table: WitnessTable
 
-    public init(table: WitnessTable) {
+    public init() {
         self.witnessType = WitnessType.self
-        self.table = table
+        self.table = WitnessRegistry.shared.table(for: WitnessType.self)
     }
 
     public func witness(for type: String, label: String? = nil) -> WitnessType? {
