@@ -53,5 +53,9 @@ let package = Package(
                 .product(name: "MacroTesting", package: "swift-macro-testing")
             ]
         ),
+        .testTarget(
+            name: "SharedTests",
+            dependencies: [ "Shared", "Witness"]
+        ),
     ]
 )
