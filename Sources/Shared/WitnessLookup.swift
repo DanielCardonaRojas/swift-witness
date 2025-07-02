@@ -5,25 +5,11 @@
 //  Created by Daniel Cardona on 30/06/25.
 //
 
-public protocol ErasableWitness {
-    associatedtype Erased
-    func erased() -> Erased
-    var erasedType: String { get }
-}
-
-public extension ErasableWitness {
-    var erasedType: String {
-        let metatype = type(of: self)
-        let parsed = MetatypeParser.parse(metatype)
-        return parsed.genericArguments[0].name
-    }
-}
-
 /// Helper for reducing code generation on specific witness tables
 public struct WitnessLookUpTable<WitnessType> {
     var witnessType: Any.Type
     /// Erased type for the witness. For example `Witness<Any>`
-    var table: WitnessTable
+    private let table: WitnessTable
 
     public init() {
         self.witnessType = WitnessType.self
