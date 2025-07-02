@@ -104,7 +104,8 @@ extension WitnessGenerator {
 
   /// Determines if the macro arguments contains a specific code generation option.
   static func containsOption(_ option: WitnessOptions, protocolDecl: ProtocolDeclSyntax) -> Bool {
-    let attribute = protocolDecl.attributes.first(where: { attribute in
+    let attribute = protocolDecl.attributes.first(
+where: { attribute in
       guard let attr = attribute.as(AttributeSyntax.self) else {
         return false
       }
@@ -115,7 +116,10 @@ extension WitnessGenerator {
       }
 
       let hasConformance = arguments.contains(where: { element in
-        element.expression.description.contains(option.rawValue)
+            guard let parsedOption = WitnessOptions(stringLiteral: element.expression.description) else {
+                return false
+            }
+            return parsedOption.contains(option)
       })
 
       return hasConformance
