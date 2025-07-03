@@ -55,7 +55,7 @@ public enum WitnessGenerator {
           }
 
           // ErasableWitness conformance and erased() method
-          if containsOption(.synthesizedConformance, protocolDecl: protocolDecl) {
+          if containsOption(.erasable, protocolDecl: protocolDecl) {
             MemberBlockItemSyntax(decl: erasedFunctionDecl(protocolDecl))
           }
 
