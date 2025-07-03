@@ -58,6 +58,13 @@ public enum WitnessGenerator {
           if containsOption(.synthesizedConformance, protocolDecl: protocolDecl) {
             MemberBlockItemSyntax(decl: erasedFunctionDecl(protocolDecl))
           }
+
+          // Synthesized conformance
+          if containsOption(.synthesizedConformance, protocolDecl: protocolDecl) {
+            if let synthesizedConformance = try? Self.generateSynthesizedConformance(protocolDecl: protocolDecl) {
+                MemberBlockItemSyntax(decl: synthesizedConformance)
+            }
+          }
         })
       )
     )
@@ -380,7 +387,7 @@ public enum WitnessGenerator {
         return functionRequirementWitnessType(functionDecl)
       }
       else if let variableDecl = decl.as(VariableDeclSyntax.self),
-              let identifier = variableDecl.bindings.first?.pattern.as(IdentifierPatternSyntax.self) {
+              let _ = variableDecl.bindings.first?.pattern.as(IdentifierPatternSyntax.self) {
 
         return variableRequirementWitnessType(variableDecl)
       }
