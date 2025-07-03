@@ -28,7 +28,7 @@ final class WitnessedTests: XCTestCase {
             }
             """
         } expansion: {
-          """
+          #"""
           protocol Fake {
               func fake() -> Self
           }
@@ -57,8 +57,25 @@ final class WitnessedTests: XCTestCase {
                           instance
                       })
               }
+              struct Synthesized: Fake {
+                  var strategy: String
+                  let context: Any
+                  var contextType: String
+                  init<Context>(context: Context, strategy: String? = nil) {
+                      self.context = context
+                      self.contextType = "\(String(describing: Context.self))"
+                      self.strategy = strategy ?? "default"
+                  }
+                  func fake() -> Synthesized {
+                      let table = FakeWitness<Any>.Table()
+                      guard let witness = table.witness(for: contextType, label: strategy) else {
+                          fatalError("Table for \(Self.self) does not contain a registered witness for strategy: \(strategy)")}
+                      let newValue = witness.fake(context)
+                      return .init(context: newValue, strategy: strategy)
+                  }
+              }
           }
-          """
+          """#
         }
     }
     
@@ -71,7 +88,7 @@ final class WitnessedTests: XCTestCase {
             }
           """
         } expansion: {
-          """
+          #"""
             protocol PricingService {
                 func price(_ item: String) -> Double
             }
@@ -97,8 +114,25 @@ final class WitnessedTests: XCTestCase {
                     instance as! A
                   })
               }
+              struct Synthesized: PricingService {
+                var strategy: String
+                let context: Any
+                var contextType: String
+                init<Context>(context: Context, strategy: String? = nil) {
+                  self.context = context
+                  self.contextType = "\(String(describing: Context.self))"
+                  self.strategy = strategy ?? "default"
+                }
+                func price(_ item: String) -> Double {
+                  let table = PricingServiceWitness<Any>.Table()
+                  guard let witness = table.witness(for: contextType, label: strategy) else {
+                      fatalError("Table for \(Self.self) does not contain a registered witness for strategy: \(strategy)")}
+                  let newValue = witness.price(context, item)
+                  return newValue
+                }
+              }
             }
-          """
+          """#
         }
     }
 

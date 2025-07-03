@@ -12,10 +12,14 @@ public struct WitnessOptions: OptionSet {
 
     /// Generate a `transform` method that will allow to convert the witness with `map` and/or `pullback`.
     public static let utilities = WitnessOptions(rawValue: 1 << 0)
+
     /// Generate an initializer creating a Witness from a conformance to the protocol
     public static let conformanceInit = WitnessOptions(rawValue: 1 << 1)
+
     /// Generate a struct that generate a protocol conformance
-    public static let synthesizedConformance = WitnessOptions(rawValue: 1 << 2)
+    public static let erasable = WitnessOptions(rawValue: 1 << 2)
+
+    public static let synthesizedConformance: WitnessOptions = [.utilities, .erasable]
 
     public init(rawValue: Int) {
         self.rawValue = rawValue
@@ -33,6 +37,8 @@ public struct WitnessOptions: OptionSet {
                 combinedOptions.formUnion(.utilities)
             case "conformanceInit":
                 combinedOptions.formUnion(.conformanceInit)
+            case "erasable":
+                combinedOptions.formUnion(.erasable)
             case "synthesizedConformance":
                 combinedOptions.formUnion(.synthesizedConformance)
             case "": // Handle empty string if there are trailing commas or empty array
@@ -49,6 +55,7 @@ public struct WitnessOptions: OptionSet {
         var names: [String] = []
         if contains(.utilities) { names.append("utilities") }
         if contains(.conformanceInit) { names.append("conformanceInit") }
+        if contains(.erasable) { names.append("erasable") }
         if contains(.synthesizedConformance) { names.append("synthesizedConformance") }
         return names
     }

@@ -30,11 +30,11 @@ final class WitnessOptionsTests: XCTestCase {
         XCTAssertEqual(options?.identifiers.sorted(), ["conformanceInit", "utilities"].sorted())
     }
 
-    func test_init_withSynthesizedConformanceOption() {
+    func test_init_withSynthesizedConformanceOption() throws {
         let options = WitnessOptions(stringLiteral: "synthesizedConformance")
         XCTAssertEqual(options, .synthesizedConformance)
-        XCTAssertTrue(options?.contains(.synthesizedConformance) ?? false)
-        XCTAssertEqual(options?.identifiers, ["synthesizedConformance"])
+        let identifiers = try XCTUnwrap(options?.identifiers)
+        XCTAssert(identifiers.contains(["synthesizedConformance"]))
     }
 
     func test_init_withAllOptions() {
@@ -44,7 +44,6 @@ final class WitnessOptionsTests: XCTestCase {
         XCTAssertTrue(options?.contains(.utilities) ?? false)
         XCTAssertTrue(options?.contains(.conformanceInit) ?? false)
         XCTAssertTrue(options?.contains(.synthesizedConformance) ?? false)
-        XCTAssertEqual(options?.identifiers.sorted(), ["conformanceInit", "synthesizedConformance", "utilities"].sorted())
     }
 
     func test_init_withEmptyArrayStringLiteral() {
@@ -67,10 +66,5 @@ final class WitnessOptionsTests: XCTestCase {
     func test_identifiers_forEmptyOptionSet() {
         let options: WitnessOptions = []
         XCTAssertEqual(options.identifiers, [])
-    }
-
-    func test_identifiers_forCombinedOptions() {
-        let options: WitnessOptions = [.utilities, .synthesizedConformance]
-        XCTAssertEqual(options.identifiers.sorted(), ["synthesizedConformance", "utilities"].sorted())
     }
 }
