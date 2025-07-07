@@ -19,6 +19,40 @@ final class WitnessedTests: XCTestCase {
     }
   }
 
+    func testSynthesizedConformance() {
+        assertMacro {
+            """
+            @Witnessed(.synthesizedConformance)
+            protocol PricingService {
+                func price(_ item: String) -> Int
+            }
+            """
+        } expansion: {
+          """
+          protocol PricingService {
+              func price(_ item: String) -> Int
+          }
+
+          struct PricingServiceWitness<A> {
+              let price: (A, String) -> Int
+              init(
+                  price: @escaping (A, String) -> Int
+              ) {
+                  self.price = price
+              }
+              struct Synthesized: PricingService {
+                  let context: A
+                  let witness: PricingServiceWitness
+                  func price(_ item: String) -> Int {
+                      let newValue = witness.price(context, item)
+                      return newValue
+                  }
+              }
+          }
+          """
+        }
+    }
+
     func testErased() {
         assertMacro {
             """
