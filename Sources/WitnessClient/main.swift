@@ -56,7 +56,7 @@ protocol BoolIndexed {
   subscript (_ value: Bool) -> Bool { get }
 }
 
-@Witnessed([.synthesizedConformance, .utilities])
+@Witnessed([.synthesizedByTableConformance, .utilities])
 protocol Fake {
     func fake() -> Self
 }

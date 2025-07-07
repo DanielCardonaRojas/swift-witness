@@ -30,7 +30,7 @@ extension Combining where A: RangeReplaceableCollection {
   }
 }
 
-@Witnessed([.synthesizedConformance, .utilities])
+@Witnessed([.synthesizedByTableConformance, .utilities])
 protocol Fake {
     func fake() -> Self
 }

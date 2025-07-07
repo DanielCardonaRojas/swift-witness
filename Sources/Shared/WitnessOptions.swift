@@ -19,7 +19,7 @@ public struct WitnessOptions: OptionSet {
     /// Generate a struct that generate a protocol conformance
     public static let erasable = WitnessOptions(rawValue: 1 << 2)
 
-    public static let synthesizedConformance: WitnessOptions = [.utilities, .erasable]
+    public static let synthesizedByTableConformance: WitnessOptions = [.utilities, .erasable]
 
     public init(rawValue: Int) {
         self.rawValue = rawValue
@@ -39,8 +39,8 @@ public struct WitnessOptions: OptionSet {
                 combinedOptions.formUnion(.conformanceInit)
             case "erasable":
                 combinedOptions.formUnion(.erasable)
-            case "synthesizedConformance":
-                combinedOptions.formUnion(.synthesizedConformance)
+            case "synthesizedByTableConformance":
+                combinedOptions.formUnion(.synthesizedByTableConformance)
             case "": // Handle empty string if there are trailing commas or empty array
                 continue
             default:
@@ -56,7 +56,7 @@ public struct WitnessOptions: OptionSet {
         if contains(.utilities) { names.append("utilities") }
         if contains(.conformanceInit) { names.append("conformanceInit") }
         if contains(.erasable) { names.append("erasable") }
-        if contains(.synthesizedConformance) { names.append("synthesizedConformance") }
+        if contains(.synthesizedByTableConformance) { names.append("synthesizedByTableConformance") }
         return names
     }
 }

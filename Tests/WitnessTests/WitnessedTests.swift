@@ -22,7 +22,7 @@ final class WitnessedTests: XCTestCase {
     func testErased() {
         assertMacro {
             """
-            @Witnessed([.synthesizedConformance, .utilities])
+            @Witnessed([.synthesizedByTableConformance, .utilities])
             protocol Fake {
                 func fake() -> Self
             }
@@ -82,7 +82,7 @@ final class WitnessedTests: XCTestCase {
     func testErasedPullback() {
         assertMacro {
             """
-            @Witnessed([.utilities, .synthesizedConformance])
+            @Witnessed([.utilities, .synthesizedByTableConformance])
             protocol PricingService {
                 func price(_ item: String) -> Double
             }

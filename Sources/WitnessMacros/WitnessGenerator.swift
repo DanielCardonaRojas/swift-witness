@@ -60,7 +60,7 @@ public enum WitnessGenerator {
           }
 
           // Synthesized conformance
-          if containsOption(.synthesizedConformance, protocolDecl: protocolDecl) {
+          if containsOption(.synthesizedByTableConformance, protocolDecl: protocolDecl) {
             if let synthesizedConformance = try? Self.generateSynthesizedConformance(protocolDecl: protocolDecl) {
                 MemberBlockItemSyntax(decl: synthesizedConformance)
             }
@@ -70,7 +70,7 @@ public enum WitnessGenerator {
     )
 
     // Conditionally add ErasableWitness conformance to the struct's inheritance clause
-    if containsOption(.synthesizedConformance, protocolDecl: protocolDecl) {
+    if containsOption(.synthesizedByTableConformance, protocolDecl: protocolDecl) {
         structDecl.inheritanceClause = InheritanceClauseSyntax(
             inheritedTypes: InheritedTypeListSyntax {
                 InheritedTypeSyntax(type: IdentifierTypeSyntax(name: .identifier("ErasableWitness")))

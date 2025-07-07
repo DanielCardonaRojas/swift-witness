@@ -30,20 +30,20 @@ final class WitnessOptionsTests: XCTestCase {
         XCTAssertEqual(options?.identifiers.sorted(), ["conformanceInit", "utilities"].sorted())
     }
 
-    func test_init_withSynthesizedConformanceOption() throws {
-        let options = WitnessOptions(stringLiteral: "synthesizedConformance")
-        XCTAssertEqual(options, .synthesizedConformance)
+    func test_init_withsynthesizedByTableConformanceOption() throws {
+        let options = WitnessOptions(stringLiteral: "synthesizedByTableConformance")
+        XCTAssertEqual(options, .synthesizedByTableConformance)
         let identifiers = try XCTUnwrap(options?.identifiers)
-        XCTAssert(identifiers.contains(["synthesizedConformance"]))
+        XCTAssert(identifiers.contains(["synthesizedByTableConformance"]))
     }
 
     func test_init_withAllOptions() {
-        let options = WitnessOptions(stringLiteral: "[.utilities, .conformanceInit, .synthesizedConformance]")
-        let expectedOptions: WitnessOptions = [.utilities, .conformanceInit, .synthesizedConformance]
+        let options = WitnessOptions(stringLiteral: "[.utilities, .conformanceInit, .synthesizedByTableConformance]")
+        let expectedOptions: WitnessOptions = [.utilities, .conformanceInit, .synthesizedByTableConformance]
         XCTAssertEqual(options, expectedOptions)
         XCTAssertTrue(options?.contains(.utilities) ?? false)
         XCTAssertTrue(options?.contains(.conformanceInit) ?? false)
-        XCTAssertTrue(options?.contains(.synthesizedConformance) ?? false)
+        XCTAssertTrue(options?.contains(.synthesizedByTableConformance) ?? false)
     }
 
     func test_init_withEmptyArrayStringLiteral() {
