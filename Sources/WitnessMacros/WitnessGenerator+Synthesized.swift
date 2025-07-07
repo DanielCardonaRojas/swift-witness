@@ -1,15 +1,37 @@
-
 import SwiftSyntax
 import SwiftSyntaxBuilder
 import Shared
 
 extension WitnessGenerator {
+    /// Generates a nested `Synthesized` struct that conforms to the original protocol.
+    ///
+    /// This struct acts as a type-erased container, holding a `context` and a `witness`
+    /// table. It forwards protocol requirements to the witness table.
+    ///
+    /// For a protocol like:
+    /// ```swift
+    /// protocol PricingService {
+    ///     func price(_ item: String) -> Int
+    /// }
+    /// ```
+    /// This function generates:
+    /// ```swift
+    /// struct Synthesized: PricingService {
+    ///     let context: A
+    ///     let witness: PricingServiceWitness<A>
+    ///
+    ///     func price(_ item: String) -> Int {
+    ///         witness.price(context, item)
+    ///     }
+    /// }
+    /// ```
     static func generateSynthesizedConformance(protocolDecl: ProtocolDeclSyntax) throws -> StructDeclSyntax {
         let protocolName = protocolDecl.name.text
         let witnessStructName = "\(protocolName)Witness"
 
         let requirements = Self.requirements(protocolDecl)
         let accessLevel = accessModifier(protocolDecl)
+        let accessLevelPrefix = accessLevel != nil ? "public " : ""
 
         let memberBlock = try MemberBlockItemListSyntax {
             VariableDeclSyntax(
@@ -60,6 +82,21 @@ extension WitnessGenerator {
         )
     }
 
+    /// Generates a method implementation for the `Synthesized` struct.
+    ///
+    /// The generated method forwards the call to the corresponding closure on the `witness`
+    /// property, passing the `context` as the first argument.
+    ///
+    /// For a protocol method:
+    /// ```swift
+    /// func price(_ item: String) -> Int
+    /// ```
+    /// This generates the following implementation within the `Synthesized` struct:
+    /// ```swift
+    /// func price(_ item: String) -> Int {
+    ///     witness.price(context, item)
+    /// }
+    /// ```
     private static func generateMethod(
         for requirement: (name: TokenSyntax, static: Bool, kind: RequirementKind, parameters: [FunctionParameterSyntax]),
         protocolDecl: ProtocolDeclSyntax,
@@ -114,6 +151,21 @@ extension WitnessGenerator {
         }
     }
 
+    /// Generates a computed property implementation for the `Synthesized` struct.
+    ///
+    /// The generated property\'s getter forwards the call to the corresponding closure on the
+    /// `witness` property, passing the `context` as an argument.
+    ///
+    /// For a protocol property:
+    /// ```swift
+    /// var price: Int { get }
+    /// ```
+    /// This generates the following implementation within the `Synthesized` struct:
+    /// ```swift
+    /// var price: Int {
+    ///     witness.price(context)
+    /// }
+    /// ```
     private static func generateComputedProperty(
         for requirement: (name: TokenSyntax, static: Bool, kind: RequirementKind, parameters: [FunctionParameterSyntax]),
         protocolDecl: ProtocolDeclSyntax,
