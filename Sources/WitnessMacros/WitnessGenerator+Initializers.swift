@@ -11,6 +11,13 @@ import SwiftSyntaxBuilder
 /// Generates initializers for the witness
 extension WitnessGenerator {
 
+  /// Generates all the initializers for the witness struct.
+  ///
+  /// This includes the default initializer that takes closures for each protocol requirement,
+  /// and optionally, a conformance-based initializer if the `.conformanceInit` option is specified.
+  ///
+  /// - Parameter protocolDecl: The protocol declaration to generate initializers for.
+  /// - Returns: An array of `MemberBlockItemSyntax` containing the generated initializers.
   static func witnessInitializers(_ protocolDecl: ProtocolDeclSyntax) -> [MemberBlockItemSyntax] {
     var initializers = [MemberBlockItemSyntax]()
     initializers.append(MemberBlockItemSyntax(decl: witnessDefaultInit(protocolDecl)))
@@ -20,7 +27,22 @@ extension WitnessGenerator {
     return initializers
   }
 
-  /// Initializer that intakes closures 
+  /// Generates the default initializer for the witness struct.
+  ///
+  /// This initializer accepts a closure for each requirement of the protocol.
+  ///
+  /// For a protocol like:
+  /// ```swift
+  /// protocol Service {
+  ///     func doSomething() -> String
+  /// }
+  /// ```
+  /// This generates:
+  /// ```swift
+  /// init(doSomething: @escaping (A) -> String) {
+  ///     self.doSomething = doSomething
+  /// }
+  /// ```
   static func witnessDefaultInit(_ protocolDecl: ProtocolDeclSyntax) -> InitializerDeclSyntax {
     .init(
       modifiers: .init(itemsBuilder: {
@@ -46,7 +68,21 @@ extension WitnessGenerator {
     )
   }
 
-  /// Initializers that converts a normal protcol conformance and converts  it into a witness struct.
+  /// Generates an initializer that creates a witness from a conforming type.
+  ///
+  /// This allows for easily creating a witness struct from an existing type that
+  /// already conforms to the protocol.
+  ///
+  /// For a protocol `Service` and a conforming type `MyService`:
+  /// ```swift
+  /// struct MyService: Service {
+  ///     func doSomething() -> String { "Hello" }
+  /// }
+  /// ```
+  /// This generates an initializer that can be used like:
+  /// ```swift
+  /// let witness = ServiceWitness(MyService.self)
+  /// ```
   static func witnessConformanceInit(_ protocolDecl: ProtocolDeclSyntax) -> InitializerDeclSyntax {
     // init() where Self: <Protocol>, AssociatedType: <Constraint> ...
     .init(
@@ -146,6 +182,14 @@ extension WitnessGenerator {
     )
   }
 
+  /// Creates the closure implementation for a protocol requirement in the conformance-based initializer.
+  ///
+  /// This function generates a closure that calls the corresponding method or property on the conforming type.
+  ///
+  /// For a function `doSomething()` on a non-static requirement, this generates:
+  /// ```swift
+  /// { instance in instance.doSomething() }
+  /// ```
   static func conformanceInitializerClosureImplementations(
     name: TokenSyntax,
     isStatic: Bool,
@@ -202,6 +246,15 @@ extension WitnessGenerator {
             )
   }
 
+  /// Generates the parameter clause for the default initializer.
+  ///
+  /// This function creates a `FunctionParameterSyntax` for each requirement in the protocol,
+  /// which is then used to construct the default initializer's signature.
+  ///
+  /// For a protocol with a function `doSomething() -> String`, this generates:
+  /// ```swift
+  /// doSomething: @escaping (A) -> String
+  /// ```
   static func defaultInitializerParameters(_ protocolDecl: ProtocolDeclSyntax) -> FunctionParameterClauseSyntax {
     let parameters = protocolDecl.memberBlock.members.flatMap(
 { (member: MemberBlockItemSyntax) -> [FunctionParameterSyntax] in
