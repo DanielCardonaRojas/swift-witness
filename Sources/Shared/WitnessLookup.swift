@@ -9,7 +9,7 @@
 public struct WitnessLookUpTable<WitnessType> {
     var witnessType: Any.Type
     /// Erased type for the witness. For example `Witness<Any>`
-    private let table: WitnessTable
+    public let table: WitnessTable
 
     public init() {
         self.witnessType = WitnessType.self
@@ -24,16 +24,5 @@ public struct WitnessLookUpTable<WitnessType> {
         table.read(type: "\(type)", label: label) as? WitnessType
     }
 
-    public func register<Witness: ErasableWitness>(
-        _ witness: Witness,
-        label: String? = nil
-    ) {
-        let erasedWitness = witness.erased()
-        table.write(
-            type: witness.erasedType,
-            label: label,
-            witness: erasedWitness
-        )
-    }
 }
 

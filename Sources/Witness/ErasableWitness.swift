@@ -4,6 +4,7 @@
 //
 //  Created by Daniel Cardona on 2/07/25.
 //
+import Shared
 
 public protocol ErasableWitness {
     associatedtype Erased
@@ -26,7 +27,12 @@ public extension ErasableWitness {
 
     func register(strategy: String? = nil) {
         let table = Table()
-        table.register(self, label: strategy ?? "default")
+        let erasedWitness = self.erased()
+        table.table.write(
+            type: self.erasedType,
+            label: strategy,
+            witness: erasedWitness
+        )
     }
 }
 
