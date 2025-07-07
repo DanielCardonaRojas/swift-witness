@@ -58,9 +58,15 @@ public enum WitnessGenerator {
           if containsOption(.erasable, protocolDecl: protocolDecl) {
             MemberBlockItemSyntax(decl: erasedFunctionDecl(protocolDecl))
           }
+            // Table based Synthesized conformance
+            if containsOption(.synthesizedByTableConformance, protocolDecl: protocolDecl) {
+              if let synthesizedConformance = try? Self.generateSynthesizedByTableConformance(protocolDecl: protocolDecl) {
+                  MemberBlockItemSyntax(decl: synthesizedConformance)
+              }
+            }
 
           // Synthesized conformance
-          if containsOption(.synthesizedByTableConformance, protocolDecl: protocolDecl) {
+          if containsOption(.synthesizedConformance, protocolDecl: protocolDecl) {
             if let synthesizedConformance = try? Self.generateSynthesizedConformance(protocolDecl: protocolDecl) {
                 MemberBlockItemSyntax(decl: synthesizedConformance)
             }

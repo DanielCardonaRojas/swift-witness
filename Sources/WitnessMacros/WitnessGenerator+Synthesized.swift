@@ -4,22 +4,21 @@ import SwiftSyntaxBuilder
 import Shared
 
 extension WitnessGenerator {
-    static func generateSynthesizedByTableConformance(protocolDecl: ProtocolDeclSyntax) throws -> StructDeclSyntax {
+    static func generateSynthesizedConformance(protocolDecl: ProtocolDeclSyntax) throws -> StructDeclSyntax {
         let protocolName = protocolDecl.name.text
         let witnessStructName = "\(protocolName)Witness"
 
         let requirements = Self.requirements(protocolDecl)
         let accessLevel = accessModifier(protocolDecl)
-        let accessLevelPrefix = accessLevel != nil ? "public " : ""
 
         let memberBlock = try MemberBlockItemListSyntax {
             VariableDeclSyntax(
                 modifiers: accessLevel != nil ? [DeclModifierSyntax(name: .keyword(.public))] : [],
-                bindingSpecifier: .keyword(.var),
+                bindingSpecifier: .keyword(.let),
                 bindings: [
                     PatternBindingSyntax(
-                        pattern: IdentifierPatternSyntax(identifier: .identifier("strategy")),
-                        typeAnnotation: TypeAnnotationSyntax(type: IdentifierTypeSyntax(name: .identifier("String")))
+                        pattern: IdentifierPatternSyntax(identifier: .identifier("context")),
+                        typeAnnotation: TypeAnnotationSyntax(type: IdentifierTypeSyntax(name: .identifier(genericLabel)))
                     )
                 ]
             )
@@ -28,28 +27,10 @@ extension WitnessGenerator {
                 bindingSpecifier: .keyword(.let),
                 bindings: [
                     PatternBindingSyntax(
-                        pattern: IdentifierPatternSyntax(identifier: .identifier("context")),
-                        typeAnnotation: TypeAnnotationSyntax(type: IdentifierTypeSyntax(name: .identifier("Any")))
+                        pattern: IdentifierPatternSyntax(identifier: .identifier("witness")),
+                        typeAnnotation: TypeAnnotationSyntax(type: IdentifierTypeSyntax(name: .identifier(witnessStructName)))
                     )
                 ]
-            )
-            VariableDeclSyntax(
-                modifiers: accessLevel != nil ? [DeclModifierSyntax(name: .keyword(.public))] : [],
-                bindingSpecifier: .keyword(.var),
-                bindings: [
-                    PatternBindingSyntax(
-                        pattern: IdentifierPatternSyntax(identifier: .identifier("contextType")),
-                        typeAnnotation: TypeAnnotationSyntax(type: IdentifierTypeSyntax(name: .identifier("String")))
-                    )
-                ]
-            )
-
-            MemberBlockItemSyntax(
-                decl: try InitializerDeclSyntax("\(raw: accessLevelPrefix)init<Context>(context: Context, strategy: String? = nil)") {
-                    "self.context = context"
-                    #"self.contextType = "\(String(describing: Context.self))""#
-                    #"self.strategy = strategy ?? "default""#
-                }
             )
 
             for req in requirements {
@@ -57,14 +38,12 @@ extension WitnessGenerator {
                     try generateMethod(
                         for: req,
                         protocolDecl: protocolDecl,
-                        synthesizedStructName: "Synthesized",
-                        witnessStructName: witnessStructName
+                        synthesizedStructName: "Synthesized"
                     )
                 } else if req.kind == .variable {
                     try generateComputedProperty(
                         for: req,
                         protocolDecl: protocolDecl,
-                        witnessStructName: witnessStructName,
                         synthesizedStructName: "Synthesized"
                     )
                 }
@@ -84,8 +63,7 @@ extension WitnessGenerator {
     private static func generateMethod(
         for requirement: (name: TokenSyntax, static: Bool, kind: RequirementKind, parameters: [FunctionParameterSyntax]),
         protocolDecl: ProtocolDeclSyntax,
-        synthesizedStructName: String,
-        witnessStructName: String
+        synthesizedStructName: String
     ) throws -> FunctionDeclSyntax {
 
         guard let funcDecl = protocolDecl.memberBlock.members
@@ -121,11 +99,6 @@ extension WitnessGenerator {
             signature: funcSignature,
             genericWhereClause: funcDecl.genericWhereClause
         ) {
-            "let table = \(raw: witnessStructName)<Any>.Table()"
-            #"guard let witness = table.witness(for: contextType, label: strategy) else {"#
-            #"    fatalError("Table for \(Self.self) does not contain a registered witness for strategy: \(strategy)")"#
-            "}"
-
             let arguments = ["context"] + funcDecl.signature.parameterClause.parameters.map { param in
                 param.secondName?.text ?? param.firstName.text
             }
@@ -134,7 +107,7 @@ extension WitnessGenerator {
             "let newValue = witness.\(raw: requirement.name.text)(\(raw: argumentList))"
 
             if returnType.description.contains("Self") {
-                "return .init(context: newValue, strategy: strategy)"
+                "return .init(context: newValue, witness: witness)"
             } else if returnType.description != "Void" {
                 "return newValue"
             }
@@ -144,7 +117,6 @@ extension WitnessGenerator {
     private static func generateComputedProperty(
         for requirement: (name: TokenSyntax, static: Bool, kind: RequirementKind, parameters: [FunctionParameterSyntax]),
         protocolDecl: ProtocolDeclSyntax,
-        witnessStructName: String,
         synthesizedStructName: String
     ) throws -> VariableDeclSyntax {
         guard let varDecl = protocolDecl.memberBlock.members
@@ -177,13 +149,9 @@ extension WitnessGenerator {
         let accessLevel = accessModifier(protocolDecl)
 
         let getter = try AccessorDeclSyntax("get") {
-            "let table = \(raw: witnessStructName)<Any>.Table()"
-            #"guard let witness = table.witness(for: contextType, label: strategy) else {"#
-            #"    fatalError("Table for \(Self.self) does not contain a registered witness for strategy: \(strategy)")"#
-            "}"
             if type.description.contains(synthesizedStructName) {
                  "let _ = witness.\(raw: propertyName)(context)"
-                 "return .init(context: context, strategy: strategy)"
+                 "return .init(context: context, witness: witness)"
             } else {
                 "return witness.\(raw: propertyName)(context)"
             }
