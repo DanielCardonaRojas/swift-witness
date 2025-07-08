@@ -9,8 +9,11 @@ import SwiftSyntax
 import SwiftSyntaxBuilder
 import Shared
 
-struct MacroError: Error {
-  let message: String
+public struct MacroError: Error {
+    public let message: String
+    public init(message: String) {
+        self.message = message
+    }
 }
 
 public enum WitnessGenerator {

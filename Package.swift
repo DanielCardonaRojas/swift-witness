@@ -8,9 +8,12 @@ let package = Package(
     name: "Witness",
     platforms: [.macOS(.v10_15), .iOS(.v13), .tvOS(.v13), .watchOS(.v6), .macCatalyst(.v13)],
     products: [
-        // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
             name: "Witness",
+            targets: ["Witness"]
+        ),
+        .library(
+            name: "WitnessGenerator",
             targets: ["Witness"]
         ),
         .executable(
@@ -24,14 +27,21 @@ let package = Package(
         .package(url: "https://github.com/pointfreeco/swift-macro-testing.git", from: "0.5.2")
     ],
     targets: [
-        // Targets are the basic building blocks of a package, defining a module or a test suite.
-        // Targets can depend on other targets in this package and products from dependencies.
-        // Macro implementation that performs the source transformation of a macro.
         .macro(
             name: "WitnessMacros",
             dependencies: [
                 .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
                 .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
+                "Shared",
+                "WitnessGenerator"
+            ]
+        ),
+
+        // Library exposing the swift-syntax code generation
+        .target(
+            name: "WitnessGenerator",
+            dependencies: [
+                .product(name: "SwiftSyntax", package: "swift-syntax"),
                 "Shared"
             ]
         ),
@@ -40,14 +50,15 @@ let package = Package(
         .target(name: "Witness", dependencies: ["WitnessMacros", "Shared"]),
         .target(name: "Shared"),
 
-        // A client of the library, which is able to use the macro in its own code.
+        // A CLI that uses the macro to generate code in new files
         .executableTarget(name: "WitnessClient", dependencies: ["Witness"]),
 
-        // A test target used to develop the macro implementation.
+        // Test targets
         .testTarget(
             name: "WitnessTests",
             dependencies: [
                 "WitnessMacros",
+                "WitnessGenerator",
                 "Shared",
                 .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
                 .product(name: "MacroTesting", package: "swift-macro-testing")
@@ -55,7 +66,11 @@ let package = Package(
         ),
         .testTarget(
             name: "SharedTests",
-            dependencies: [ "Shared", "Witness"]
+            dependencies: [
+                "Shared",
+                "Witness",
+                "WitnessGenerator"
+            ]
         ),
     ]
 )

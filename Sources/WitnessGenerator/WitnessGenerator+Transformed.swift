@@ -115,7 +115,7 @@ extension WitnessGenerator {
     }
   }
 
-  /// Creates a closure type function parameter like: `map: @espacing (A) -> B` where `A` is `genericIn` and `B` is `genericOut`
+  /// Creates a closure type function parameter like: `map: @escaping (A) -> B` where `A` is `genericIn` and `B` is `genericOut`
   static func closureParameterTransformType(from genericIn: String, to genericOut: String, name: String) -> FunctionParameterSyntax {
     FunctionParameterSyntax(
       firstName: .identifier(name),

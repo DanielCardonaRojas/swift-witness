@@ -2,6 +2,7 @@ import SwiftCompilerPlugin
 import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
+import WitnessGenerator
 
 @main
 struct WitnessPlugin: CompilerPlugin {
