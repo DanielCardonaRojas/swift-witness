@@ -3,6 +3,7 @@
 [![Swift Version](https://img.shields.io/badge/Swift-5.9-orange.svg)]()
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-0.1.0-brightgreen.svg)]()
+[![CI Status](https://github.com/DanielCardonaRojas/ProtocolWitnessMacro/actions/workflows/pull_request.yml/badge.svg)](https://github.com/DanielCardonaRojas/ProtocolWitnessMacro/actions/workflows/pull_request.yml)
 
 **Witness** is a Swift package that provides a macro to generate protocol witness structs from protocol declarations. This allows you to create lightweight, composable, and dynamic representations of protocol conformances, enabling powerful abstractions and transformations.
 
