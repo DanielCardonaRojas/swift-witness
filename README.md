@@ -7,6 +7,7 @@
 - **Transform Methods**: Automatically generates utility methods like `pullback`, `map`, and `iso` for transforming witness structs.
 - **Conformance Initializer**: Generates a special initializer that converts a protocol conformance into a witness struct.
 - **Dynamic Code Generation**: The macro generates code dynamically based on the options you supply, ensuring flexibility and adaptability.
+- **Synthesized Conformances**: Automatically synthesizes a protocol conformance from a witness, enabling powerful dynamic behavior.
 - **Comprehensive Protocol Support**: Supports a wide range of protocol features, including:
   - Associated types
   - Subscripts
@@ -125,6 +126,16 @@ public struct SnapshottableWitness<A, Format> {
 ```
 
 </details>
+
+## What is a protocol witness?
+
+A protocol witness is a concrete type (typically a struct) that implements the requirements of a protocol. Instead of a type conforming to a protocol directly, a "witness" is created that holds a set of closures, where each closure corresponds to a requirement of the protocol. This approach, popularized by the [Point-Free](https://www.pointfree.co) video series, allows for greater flexibility and composability.
+
+For a detailed explanation, watch Brandon Williams' talk on the subject:
+[Protocol Witnesses by Brandon Williams (Point-Free)](https://www.youtube.com/watch?v=clP_r_20p2A)
+
+For more reading, check out this article:
+[Protocol Witnesses in Swift by Jean Ruiz](https://jeansruiz.com/protocols/2023/04/28/protocol-witnesses.html)
 
 
 
