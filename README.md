@@ -1,27 +1,35 @@
-# Witness: Protocol Witness Macro for Swift
+# Witness: Protocol Witness Macro for Swift 🛡️
+
+[![Swift Version](https://img.shields.io/badge/Swift-5.9-orange.svg)]()
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/Version-0.1.0-brightgreen.svg)]()
 
 **Witness** is a Swift package that provides a macro to generate protocol witness structs from protocol declarations. This allows you to create lightweight, composable, and dynamic representations of protocol conformances, enabling powerful abstractions and transformations.
 
-## Features
+---
 
-- **Transform Methods**: Automatically generates utility methods like `pullback`, `map`, and `iso` for transforming witness structs.
-- **Conformance Initializer**: Generates a special initializer that converts a protocol conformance into a witness struct.
-- **Dynamic Code Generation**: The macro generates code dynamically based on the options you supply, ensuring flexibility and adaptability.
-- **Synthesized Conformances**: Automatically synthesizes a protocol conformance from a witness, enabling powerful dynamic behavior.
-- **Comprehensive Protocol Support**: Supports a wide range of protocol features, including:
-  - Associated types
-  - Subscripts
-  - Async/await functions
-  - Getters and setters
-  - Mutating functions
+## ✨ Features
 
-## Installation
+-   **🔄 Transform Methods**: Automatically generates utility methods like `pullback`, `map`, and `iso` for transforming witness structs.
+-   **🤝 Conformance Initializer**: Generates a special initializer that converts a protocol conformance into a witness struct.
+-   **⚙️ Dynamic Code Generation**: The macro generates code dynamically based on the options you supply, ensuring flexibility and adaptability.
+-   **⚡ Synthesized Conformances**: Automatically synthesizes a protocol conformance from a witness, enabling powerful dynamic behavior.
+-   **✅ Comprehensive Protocol Support**: Supports a wide range of protocol features, including:
+    -   Associated types
+    -   Subscripts
+    -   Async/await functions
+    -   Getters and setters
+    -   Mutating functions
+
+---
+
+## 📦 Installation
 
 To use **Witness** in your project, add it as a dependency in your `Package.swift` file:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/DanielCardonaRojas/ProtocolWitnessMacro.git", from: "1.0.0")
+    .package(url: "https://github.com/DanielCardonaRojas/ProtocolWitnessMacro.git", from: "0.1.0")
 ]
 ```
 
@@ -31,7 +39,9 @@ Then, import the package in your Swift files:
 import Witness
 ```
 
-## Usage
+---
+
+## 🚀 Usage
 
 ### Basic Example
 
@@ -91,7 +101,7 @@ public struct SnapshottableWitness<A, Format> {
 
     public init(
         diffable: DiffableWitness<Format>,
-        pathExtension: @escaping () -> String ,
+        pathExtension: @escaping () -> String,
         snapshot: @escaping (A) -> Format
     ) {
         self.diffable = diffable
@@ -99,7 +109,7 @@ public struct SnapshottableWitness<A, Format> {
         self.snapshot = snapshot
     }
 
-    public init() where A: Snapshottable , Format: Diffable, A.Format == Format {
+    public init() where A: Snapshottable, Format: Diffable, A.Format == Format {
         self.diffable = .init()
         self.pathExtension = {
             A.pathExtension
@@ -127,9 +137,11 @@ public struct SnapshottableWitness<A, Format> {
 
 </details>
 
-## What is a protocol witness?
+---
 
-A protocol witness is a concrete type (typically a struct) that implements the requirements of a protocol. Instead of a type conforming to a protocol directly, a "witness" is created that holds a set of closures, where each closure corresponds to a requirement of the protocol. This approach, popularized by the [Point-Free](https://www.pointfree.co) video series, allows for greater flexibility and composability.
+## 🤔 What is a protocol witness?
+
+> A protocol witness is a concrete type (typically a struct) that implements the requirements of a protocol. Instead of a type conforming to a protocol directly, a "witness" is created that holds a set of closures, where each closure corresponds to a requirement of the protocol. This approach, popularized by the [Point-Free](https://www.pointfree.co) video series, allows for greater flexibility and composability.
 
 For a detailed explanation, watch Brandon Williams' talk on the subject:
 [Protocol Witnesses by Brandon Williams (Point-Free)](https://www.youtube.com/watch?v=clP_r_20p2A)
@@ -137,12 +149,12 @@ For a detailed explanation, watch Brandon Williams' talk on the subject:
 For more reading, check out this article:
 [Protocol Witnesses in Swift by Jean Ruiz](https://jeansruiz.com/protocols/2023/04/28/protocol-witnesses.html)
 
+---
 
-
-## Supported Protocol Features
+## 🛠️ Supported Protocol Features
 
 | Feature                  | Done       | In Progress |
-|--------------------------|------------|-------------|
+| ------------------------ | ---------- | ----------- |
 | Associated Types         | ✅          |             |
 | Subscripts               | ✅          |             |
 | Async/Await              | ✅          |             |
@@ -154,10 +166,11 @@ For more reading, check out this article:
 
 For non-static methods, the implicit `self` parameter is mapped to the first parameter in the generated closure. For example:
 
-
 Here, the `self` parameter in the `toggle()` method is mapped to the `inout A` parameter in the closure.
 
-## Other Examples
+---
+
+## 📚 Other Examples
 
 ### `RandomNumberGenerator`
 
@@ -189,6 +202,7 @@ struct RandomNumberGeneratorWitness<A> {
     }
 }
 ```
+
 </details>
 
 ### `Togglable`
@@ -215,9 +229,8 @@ struct TogglableWitness<A> {
 
 </details>
 
-
-
 ### `Convertible`
+
 ```swift
 @Witnessed([.utilities, .conformanceInit])
 protocol Convertible {
@@ -228,7 +241,6 @@ protocol Convertible {
 
 <details> <summary>Generated Code</summary>
 
-
 ```swift
 struct ConvertibleWitness<A, To> {
     let convert: (A) -> To
@@ -237,7 +249,7 @@ struct ConvertibleWitness<A, To> {
     ) {
         self.convert = convert
     }
-    init() where A: Convertible , A.To == To {
+    init() where A: Convertible, A.To == To {
         self.convert = { instance in
             instance.convert()
         }
@@ -256,9 +268,8 @@ struct ConvertibleWitness<A, To> {
 
 </details>
 
+---
 
-## License
+## 📄 License
 
 **Witness** is released under the MIT License. See [LICENSE](LICENSE) for details.
-
----
