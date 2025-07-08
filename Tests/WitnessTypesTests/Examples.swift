@@ -5,7 +5,7 @@
 //  Created by Daniel Cardona on 2/07/25.
 //
 import Witness
-import Shared
+import WitnessTypes
 
 @Witnessed([.utilities, .conformanceInit])
 protocol Combinable {

@@ -1,7 +1,7 @@
 
 import SwiftSyntax
 import SwiftSyntaxBuilder
-import Shared
+import WitnessTypes
 
 extension WitnessGenerator {
     static func generateSynthesizedByTableConformance(protocolDecl: ProtocolDeclSyntax) throws -> StructDeclSyntax {

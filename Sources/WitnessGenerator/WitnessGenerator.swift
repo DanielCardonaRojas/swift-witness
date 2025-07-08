@@ -7,7 +7,7 @@
 
 import SwiftSyntax
 import SwiftSyntaxBuilder
-import Shared
+@_exported import WitnessTypes
 
 public struct MacroError: Error {
     public let message: String

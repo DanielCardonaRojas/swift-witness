@@ -7,7 +7,7 @@
 
 import SwiftSyntax
 import SwiftSyntaxBuilder
-import Shared
+import WitnessTypes
 
 /// Simple extensions are reused multiple times
 extension WitnessGenerator {

@@ -6,7 +6,7 @@
 //
 
 import XCTest
-@testable import Shared
+@testable import WitnessTypes
 
 final class WitnessLookupTableTests: XCTestCase {
     func testReadesRegisteredInExtension() {

@@ -1,6 +1,6 @@
 
 import XCTest
-import Shared
+import WitnessTypes
 
 final class WitnessOptionsTests: XCTestCase {
 

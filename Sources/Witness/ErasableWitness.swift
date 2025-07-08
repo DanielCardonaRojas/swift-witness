@@ -4,7 +4,7 @@
 //
 //  Created by Daniel Cardona on 2/07/25.
 //
-import Shared
+import WitnessTypes
 
 public protocol ErasableWitness {
     associatedtype Erased

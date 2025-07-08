@@ -1,6 +1,6 @@
 import Witness
 import Foundation
-import Shared
+import WitnessTypes
 
 @Witnessed([.utilities])
 public protocol Comparable {

@@ -1,6 +1,6 @@
 import SwiftSyntax
 import SwiftSyntaxBuilder
-import Shared
+import WitnessTypes
 
 extension WitnessGenerator {
     /// Generates a nested `Synthesized` struct that conforms to the original protocol.

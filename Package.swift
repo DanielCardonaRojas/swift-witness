@@ -32,7 +32,7 @@ let package = Package(
             dependencies: [
                 .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
                 .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
-                "Shared",
+                "WitnessTypes",
                 "WitnessGenerator"
             ]
         ),
@@ -42,13 +42,14 @@ let package = Package(
             name: "WitnessGenerator",
             dependencies: [
                 .product(name: "SwiftSyntax", package: "swift-syntax"),
-                "Shared"
+                .product(name: "SwiftSyntaxBuilder", package: "swift-syntax"),
+                "WitnessTypes"
             ]
         ),
 
         // Library that exposes a macro as part of its API, which is used in client programs.
-        .target(name: "Witness", dependencies: ["WitnessMacros", "Shared"]),
-        .target(name: "Shared"),
+        .target(name: "Witness", dependencies: ["WitnessMacros", "WitnessTypes"]),
+        .target(name: "WitnessTypes"),
 
         // A CLI that uses the macro to generate code in new files
         .executableTarget(name: "WitnessClient", dependencies: ["Witness"]),
@@ -59,15 +60,15 @@ let package = Package(
             dependencies: [
                 "WitnessMacros",
                 "WitnessGenerator",
-                "Shared",
+                "WitnessTypes",
                 .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
                 .product(name: "MacroTesting", package: "swift-macro-testing")
             ]
         ),
         .testTarget(
-            name: "SharedTests",
+            name: "WitnessTypesTests",
             dependencies: [
-                "Shared",
+                "WitnessTypes",
                 "Witness",
                 "WitnessGenerator"
             ]
