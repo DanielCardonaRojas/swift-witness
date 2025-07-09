@@ -141,8 +141,9 @@ extension WitnessGenerator {
             }
             let argumentList = arguments.joined(separator: ", ")
             let tryKeyword = funcDecl.signature.effectSpecifiers?.throwsSpecifier != nil ? "try " : ""
+            let awaitKeyword = funcDecl.signature.effectSpecifiers?.asyncSpecifier != nil ? "await " : ""
 
-            "let newValue = \(raw: tryKeyword)witness.\(raw: requirement.name.text)(\(raw: argumentList))"
+            "let newValue = \(raw: tryKeyword)\(raw: awaitKeyword)witness.\(raw: requirement.name.text)(\(raw: argumentList))"
 
             if returnType.description.contains("Self") {
                 "return .init(context: newValue, witness: witness)"

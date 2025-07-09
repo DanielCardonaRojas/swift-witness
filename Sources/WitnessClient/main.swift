@@ -60,3 +60,9 @@ protocol BoolIndexed {
 protocol Fake {
     func fake() -> Self
 }
+
+@Witnessed([.synthesizedConformance])
+protocol DataService {
+    func fetch() async throws -> Data
+    func fetchFromCache() throws -> Data
+}
