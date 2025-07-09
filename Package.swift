@@ -14,7 +14,7 @@ let package = Package(
         ),
         .library(
             name: "WitnessGenerator",
-            targets: ["Witness"]
+            targets: ["WitnessGenerator"]
         ),
         .executable(
             name: "WitnessClient",
