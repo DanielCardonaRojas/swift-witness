@@ -16,6 +16,10 @@ let package = Package(
             name: "WitnessGenerator",
             targets: ["WitnessGenerator"]
         ),
+        .library(
+            name: "WitnessTypes",
+            targets: ["WitnessTypes"]
+        ),
         .executable(
             name: "WitnessClient",
             targets: ["WitnessClient"]
@@ -49,6 +53,7 @@ let package = Package(
 
         // Library that exposes a macro as part of its API, which is used in client programs.
         .target(name: "Witness", dependencies: ["WitnessMacros", "WitnessTypes"]),
+        // Library that exposes base types
         .target(name: "WitnessTypes"),
 
         // A CLI that uses the macro to generate code in new files
