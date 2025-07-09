@@ -21,9 +21,11 @@ extension WitnessGenerator {
     static func witnessInitializers(_ protocolDecl: ProtocolDeclSyntax, options: WitnessOptions?) -> [MemberBlockItemSyntax] {
     let options = options ?? codeGenOptions(protocolDecl: protocolDecl)
     var initializers = [MemberBlockItemSyntax]()
-    initializers.append(MemberBlockItemSyntax(decl: witnessDefaultInit(protocolDecl)))
-    if options?.contains(.conformanceInit) ?? false {
-      initializers.append(MemberBlockItemSyntax(decl: witnessConformanceInit(protocolDecl)))
+    if accessModifier(protocolDecl)?.name.text == TokenSyntax.keyword(.public).text {
+        initializers.append(MemberBlockItemSyntax(decl: witnessDefaultInit(protocolDecl)))
+        if options?.contains(.conformanceInit) ?? false {
+            initializers.append(MemberBlockItemSyntax(decl: witnessConformanceInit(protocolDecl)))
+        }
     }
     return initializers
   }

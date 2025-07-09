@@ -35,11 +35,6 @@ final class WitnessedTests: XCTestCase {
 
           struct PricingServiceWitness<A> {
               let price: (A, String) async throws -> Int
-              init(
-                  price: @escaping (A, String) async throws -> Int
-              ) {
-                  self.price = price
-              }
               struct Synthesized: PricingService {
                   let context: A
                   let witness: PricingServiceWitness
@@ -69,11 +64,6 @@ final class WitnessedTests: XCTestCase {
 
           struct FakeWitness<A>: ErasableWitness {
               let fake: (A) -> A
-              init(
-                  fake: @escaping (A) -> A
-              ) {
-                  self.fake = fake
-              }
               func transform<B>(
                   pullback: @escaping (B) -> A,
                   map: @escaping (A) -> B
@@ -129,11 +119,6 @@ final class WitnessedTests: XCTestCase {
 
             struct PricingServiceWitness<A>: ErasableWitness {
               let price: (A, String) -> Double
-              init(
-                price: @escaping (A, String) -> Double
-              ) {
-                self.price = price
-              }
               func transform<B>(
                 pullback: @escaping (B) -> A
               ) -> PricingServiceWitness<B> {
@@ -211,24 +196,26 @@ final class WitnessedTests: XCTestCase {
     assertMacro {
       """
       @Witnessed([.utilities])
-      protocol RandomNumberGenerator {
+      public protocol RandomNumberGenerator {
         func random() -> Double
       }
       """
     } expansion: {
       """
-      protocol RandomNumberGenerator {
+      public protocol RandomNumberGenerator {
         func random() -> Double
       }
 
-      struct RandomNumberGeneratorWitness<A> {
-        let random: (A) -> Double
-        init(
+      public struct RandomNumberGeneratorWitness<A> {
+        public let random: (A) -> Double
+
+        public init(
           random: @escaping (A) -> Double
         ) {
           self.random = random
         }
-        func transform<B>(
+
+        public func transform<B>(
           pullback: @escaping (B) -> A
         ) -> RandomNumberGeneratorWitness<B> {
           .init(
@@ -394,11 +381,6 @@ final class WitnessedTests: XCTestCase {
 
       struct TogglableWitness<A> {
         let toggle: (inout A) -> Void
-        init(
-          toggle: @escaping (inout A) -> Void
-        ) {
-          self.toggle = toggle
-        }
       }
       """
     }
@@ -474,16 +456,6 @@ final class WitnessedTests: XCTestCase {
 
       struct CombinableWitness<A> {
         let combine: (A, A) -> A
-        init(
-          combine: @escaping (A, A) -> A
-        ) {
-          self.combine = combine
-        }
-        init() where A: Combinable {
-          self.combine = { instance, other in
-            instance.combine(_ : other)
-          }
-        }
         func transform<B>(
           pullback: @escaping (B) -> A,
           map: @escaping (A) -> B
@@ -517,16 +489,6 @@ final class WitnessedTests: XCTestCase {
 
       struct ConvertibleWitness<A, To> {
         let convert: (A) -> To
-        init(
-          convert: @escaping (A) -> To
-        ) {
-          self.convert = convert
-        }
-        init() where A: Convertible , A.To == To {
-          self.convert = { instance in
-            instance.convert()
-          }
-        }
         func transform<B>(
           pullback: @escaping (B) -> A
         ) -> ConvertibleWitness<B, To> {
@@ -557,14 +519,45 @@ final class WitnessedTests: XCTestCase {
 
       struct BoolIndexedWitness<A> {
         let indexedBy: (A, Bool) -> Bool
-        init(
-          indexedBy: @escaping (A, Bool) -> Bool
-        ) {
-          self.indexedBy = indexedBy
-        }
       }
       """
     }
   }
+
+    func testService() {
+        assertMacro {
+            """
+            @Witnessed([.synthesizedConformance])
+            protocol DataService {
+                func fetch() async throws -> Data
+                func fetchFromCache() throws -> Data
+            }
+            """
+        } expansion: {
+          """
+          protocol DataService {
+              func fetch() async throws -> Data
+              func fetchFromCache() throws -> Data
+          }
+
+          struct DataServiceWitness<A> {
+              let fetch: (A) async throws -> Data
+              let fetchFromCache: (A) throws -> Data
+              struct Synthesized: DataService {
+                  let context: A
+                  let witness: DataServiceWitness
+                  func fetch() async throws -> Data {
+                      let newValue = try await witness.fetch(context)
+                      return newValue
+                  }
+                  func fetchFromCache() throws -> Data {
+                      let newValue = try witness.fetchFromCache(context)
+                      return newValue
+                  }
+              }
+          }
+          """
+        }
+    }
 
 }
