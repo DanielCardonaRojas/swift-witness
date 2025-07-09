@@ -31,7 +31,7 @@ extension WitnessGenerator {
 
         let requirements = Self.requirements(protocolDecl)
         let accessLevel = accessModifier(protocolDecl)
-        let accessLevelPrefix = accessLevel != nil ? "public " : ""
+        
 
         let memberBlock = try MemberBlockItemListSyntax {
             VariableDeclSyntax(
@@ -140,8 +140,9 @@ extension WitnessGenerator {
                 param.secondName?.text ?? param.firstName.text
             }
             let argumentList = arguments.joined(separator: ", ")
+            let tryKeyword = funcDecl.signature.effectSpecifiers?.throwsSpecifier != nil ? "try " : ""
 
-            "let newValue = witness.\(raw: requirement.name.text)(\(raw: argumentList))"
+            "let newValue = \(raw: tryKeyword)witness.\(raw: requirement.name.text)(\(raw: argumentList))"
 
             if returnType.description.contains("Self") {
                 "return .init(context: newValue, witness: witness)"

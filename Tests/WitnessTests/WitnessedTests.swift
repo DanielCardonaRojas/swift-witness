@@ -24,27 +24,27 @@ final class WitnessedTests: XCTestCase {
             """
             @Witnessed(.synthesizedConformance)
             protocol PricingService {
-                func price(_ item: String) -> Int
+                func price(_ item: String) throws -> Int
             }
             """
         } expansion: {
           """
           protocol PricingService {
-              func price(_ item: String) -> Int
+              func price(_ item: String) throws -> Int
           }
 
           struct PricingServiceWitness<A> {
-              let price: (A, String) -> Int
+              let price: (A, String) throws -> Int
               init(
-                  price: @escaping (A, String) -> Int
+                  price: @escaping (A, String) throws -> Int
               ) {
                   self.price = price
               }
               struct Synthesized: PricingService {
                   let context: A
                   let witness: PricingServiceWitness
-                  func price(_ item: String) -> Int {
-                      let newValue = witness.price(context, item)
+                  func price(_ item: String) throws -> Int {
+                      let newValue = try witness.price(context, item)
                       return newValue
                   }
               }
