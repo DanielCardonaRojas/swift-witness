@@ -18,10 +18,11 @@ extension WitnessGenerator {
   ///
   /// - Parameter protocolDecl: The protocol declaration to generate initializers for.
   /// - Returns: An array of `MemberBlockItemSyntax` containing the generated initializers.
-  static func witnessInitializers(_ protocolDecl: ProtocolDeclSyntax) -> [MemberBlockItemSyntax] {
+    static func witnessInitializers(_ protocolDecl: ProtocolDeclSyntax, options: WitnessOptions?) -> [MemberBlockItemSyntax] {
+    let options = options ?? codeGenOptions(protocolDecl: protocolDecl)
     var initializers = [MemberBlockItemSyntax]()
     initializers.append(MemberBlockItemSyntax(decl: witnessDefaultInit(protocolDecl)))
-    if containsOption(.conformanceInit, protocolDecl: protocolDecl) {
+    if options?.contains(.conformanceInit) ?? false {
       initializers.append(MemberBlockItemSyntax(decl: witnessConformanceInit(protocolDecl)))
     }
     return initializers

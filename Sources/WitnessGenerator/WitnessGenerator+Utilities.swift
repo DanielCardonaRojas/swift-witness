@@ -102,31 +102,25 @@ extension WitnessGenerator {
     )
   }
 
-  /// Determines if the macro arguments contains a specific code generation option.
-  static func containsOption(_ option: WitnessOptions, protocolDecl: ProtocolDeclSyntax) -> Bool {
-    let attribute = protocolDecl.attributes.first(
-where: { attribute in
-      guard let attr = attribute.as(AttributeSyntax.self) else {
-        return false
-      }
-
-      guard let arguments = attr.arguments?.as(LabeledExprListSyntax.self) else {
-        // No arguments or unexpected format
-        return false
-      }
-
-      let hasConformance = arguments.contains(where: { element in
-            guard let parsedOption = WitnessOptions(stringLiteral: element.expression.description) else {
-                return false
+    static func codeGenOptions(protocolDecl: ProtocolDeclSyntax) -> WitnessOptions? {
+        for attribute in protocolDecl.attributes {
+            guard let attr = attribute.as(AttributeSyntax.self) else {
+                return nil
             }
-            return parsedOption.contains(option)
-      })
 
-      return hasConformance
-    })
-
-    return attribute != nil
-  }
+            guard let arguments = attr.arguments?.as(LabeledExprListSyntax.self) else {
+                // No arguments or unexpected format
+                return nil
+            }
+            for argument in arguments {
+                guard let parsedOption = WitnessOptions(stringLiteral: argument.expression.description) else {
+                    continue
+                }
+                return parsedOption
+            }
+        }
+        return nil
+    }
 
   /// Groups a collection of declarations and separates them with a new line as well as adding an optional header comment
   static func groupedDeclarations(

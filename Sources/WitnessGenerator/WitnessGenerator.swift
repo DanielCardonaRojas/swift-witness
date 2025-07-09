@@ -19,7 +19,8 @@ public struct MacroError: Error {
 public enum WitnessGenerator {
   static let genericLabel = "A"
 
-  public static func processProtocol(protocolDecl: ProtocolDeclSyntax) throws -> [DeclSyntax] {
+    public static func processProtocol(protocolDecl: ProtocolDeclSyntax, options: WitnessOptions? = nil) throws -> [DeclSyntax] {
+    let options = options ?? codeGenOptions(protocolDecl: protocolDecl)
     let convertedProtocolRequirements: [MemberBlockItemSyntax] = protocolDecl.memberBlock.members.compactMap { member in
       if let member = processProtocolRequirement(
         member.decl,
@@ -46,30 +47,30 @@ public enum WitnessGenerator {
           }
 
           // Initializers
-          for member in groupedDeclarations(witnessInitializers(protocolDecl), separated: true) {
+          for member in groupedDeclarations(witnessInitializers(protocolDecl, options: options), separated: true) {
             member
           }
 
           // Utilities
-          if containsOption(.utilities, protocolDecl: protocolDecl) {
+          if options?.contains(.utilities) ?? false {
             if let member = witnessTransformation(protocolDecl) {
               member
             }
           }
 
           // ErasableWitness conformance and erased() method
-          if containsOption(.erasable, protocolDecl: protocolDecl) {
+          if options?.contains(.erasable) ?? false {
             MemberBlockItemSyntax(decl: erasedFunctionDecl(protocolDecl))
           }
             // Table based Synthesized conformance
-            if containsOption(.synthesizedByTableConformance, protocolDecl: protocolDecl) {
+            if options?.contains(.synthesizedByTableConformance) ?? false {
               if let synthesizedConformance = try? Self.generateSynthesizedByTableConformance(protocolDecl: protocolDecl) {
                   MemberBlockItemSyntax(decl: synthesizedConformance)
               }
             }
 
           // Synthesized conformance
-          if containsOption(.synthesizedConformance, protocolDecl: protocolDecl) {
+          if options?.contains(.synthesizedConformance) ?? false {
             if let synthesizedConformance = try? Self.generateSynthesizedConformance(protocolDecl: protocolDecl) {
                 MemberBlockItemSyntax(decl: synthesizedConformance)
             }
@@ -79,7 +80,7 @@ public enum WitnessGenerator {
     )
 
     // Conditionally add ErasableWitness conformance to the struct's inheritance clause
-    if containsOption(.synthesizedByTableConformance, protocolDecl: protocolDecl) {
+    if options?.contains(.synthesizedByTableConformance) ?? false {
         structDecl.inheritanceClause = InheritanceClauseSyntax(
             inheritedTypes: InheritedTypeListSyntax {
                 InheritedTypeSyntax(type: IdentifierTypeSyntax(name: .identifier("ErasableWitness")))
