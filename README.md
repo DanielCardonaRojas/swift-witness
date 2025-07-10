@@ -187,11 +187,6 @@ protocol RandomNumberGenerator {
 ```swift
 struct RandomNumberGeneratorWitness<A> {
     let random: (A) -> Double
-    init(
-        random: @escaping (A) -> Double
-    ) {
-        self.random = random
-    }
     func transform<B>(
         pullback: @escaping (B) -> A
     ) -> RandomNumberGeneratorWitness<B> {
@@ -218,9 +213,9 @@ protocol Togglable {
 <details> <summary>Generated Code</summary>
 
 ```swift
-struct TogglableWitness<A> {
-    let toggle: (inout A) -> Void
-    init(
+public struct TogglableWitness<A> {
+    public let toggle: (inout A) -> Void
+    public init(
         toggle: @escaping (inout A) -> Void
     ) {
         self.toggle = toggle
@@ -245,11 +240,6 @@ protocol Convertible {
 ```swift
 struct ConvertibleWitness<A, To> {
     let convert: (A) -> To
-    init(
-        convert: @escaping (A) -> To
-    ) {
-        self.convert = convert
-    }
     init() where A: Convertible, A.To == To {
         self.convert = { instance in
             instance.convert()
