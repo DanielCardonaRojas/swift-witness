@@ -37,7 +37,7 @@ final class WitnessedTests: XCTestCase {
               let price: (A, String) async throws -> Int
               struct Synthesized: PricingService {
                   let context: A
-                  let witness: PricingServiceWitness
+                  let witness: PricingServiceWitness<A>
                   func price(_ item: String) async throws -> Int {
                       let newValue = try await witness.price(context, item)
                       return newValue
@@ -545,7 +545,7 @@ final class WitnessedTests: XCTestCase {
               let fetchFromCache: (A) throws -> Data
               struct Synthesized: DataService {
                   let context: A
-                  let witness: DataServiceWitness
+                  let witness: DataServiceWitness<A>
                   func fetch() async throws -> Data {
                       let newValue = try await witness.fetch(context)
                       return newValue
@@ -553,6 +553,36 @@ final class WitnessedTests: XCTestCase {
                   func fetchFromCache() throws -> Data {
                       let newValue = try witness.fetchFromCache(context)
                       return newValue
+                  }
+              }
+          }
+          """
+        }
+    }
+
+    func testSynthesizedWithVariable() {
+        assertMacro {
+            """
+            @Witnessed([.synthesizedConformance])
+            protocol PropertyService {
+                var value: Int { get }
+            }
+            """
+        } expansion: {
+          """
+          protocol PropertyService {
+              var value: Int { get }
+          }
+
+          struct PropertyServiceWitness<A> {
+              let value: (A) -> Int
+              struct Synthesized: PropertyService {
+                  let context: A
+                  let witness: PropertyServiceWitness<A>
+                  var value: Int {
+                      get {
+                          return witness.value(context)
+                      }
                   }
               }
           }
