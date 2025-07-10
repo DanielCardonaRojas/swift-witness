@@ -50,7 +50,16 @@ extension WitnessGenerator {
                 bindings: [
                     PatternBindingSyntax(
                         pattern: IdentifierPatternSyntax(identifier: .identifier("witness")),
-                        typeAnnotation: TypeAnnotationSyntax(type: IdentifierTypeSyntax(name: .identifier(witnessStructName)))
+                        typeAnnotation: TypeAnnotationSyntax(
+                            type: IdentifierTypeSyntax(
+                                name: .identifier(witnessStructName),
+                                genericArgumentClause: GenericArgumentClauseSyntax(
+                                    arguments: GenericArgumentListSyntax {
+                                        GenericArgumentSyntax(argument: IdentifierTypeSyntax(name: .identifier(genericLabel)))
+                                    }
+                                )
+                            )
+                        )
                     )
                 ]
             )
@@ -140,7 +149,7 @@ extension WitnessGenerator {
                 param.secondName?.text ?? param.firstName.text
             }
             let argumentList = arguments.joined(separator: ", ")
-            let tryKeyword = funcDecl.signature.effectSpecifiers?.throwsSpecifier != nil ? "try " : ""
+            let tryKeyword = funcDecl.signature.effectSpecifiers?.throwsClause?.throwsSpecifier != nil ? "try " : ""
             let awaitKeyword = funcDecl.signature.effectSpecifiers?.asyncSpecifier != nil ? "await " : ""
 
             "let newValue = \(raw: tryKeyword)\(raw: awaitKeyword)witness.\(raw: requirement.name.text)(\(raw: argumentList))"
@@ -179,10 +188,7 @@ extension WitnessGenerator {
             throw MacroError(message: "Could not find var declaration for requirement '\(requirement.name.text)'")
         }
 
-        guard let binding = varDecl.bindings.first,
-              var type = binding.typeAnnotation?.type else {
-            throw MacroError(message: "Variable requirement '\(requirement.name.text)' must have a type annotation.")
-        }
+        var type = varDecl.bindings.first?.typeAnnotation?.type ?? TypeSyntax(stringLiteral: "Void")
 
         class SelfReplacer: SyntaxRewriter {
             let replacement: String
@@ -202,14 +208,12 @@ extension WitnessGenerator {
         let propertyName = requirement.name.text
         let accessLevel = accessModifier(protocolDecl)
 
-        let getter = try AccessorDeclSyntax("get") {
-            if type.description.contains(synthesizedStructName) {
-                 "let _ = witness.\(raw: propertyName)(context)"
-                 "return .init(context: context, witness: witness)"
-            } else {
-                "return witness.\(raw: propertyName)(context)"
-            }
-        }
+        let getter = AccessorDeclSyntax(
+            accessorSpecifier: .keyword(.get),
+            body: CodeBlockSyntax(statements: CodeBlockItemListSyntax {
+                CodeBlockItemSyntax(stringLiteral: "return witness.\(propertyName)(context)")
+            })
+        )
 
         return VariableDeclSyntax(
             modifiers: accessLevel != nil ? [.init(name: .keyword(.public))] : [],
