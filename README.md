@@ -16,11 +16,13 @@
 -   **⚙️ Dynamic Code Generation**: The macro generates code dynamically based on the options you supply, ensuring flexibility and adaptability.
 -   **⚡ Synthesized Conformances**: Automatically synthesizes a protocol conformance from a witness, enabling powerful dynamic behavior.
 -   **✅ Comprehensive Protocol Support**: Supports a wide range of protocol features, including:
-    -   Associated types
+    -   Associated types and constraints
     -   Subscripts
     -   Async/await functions
+    -   Throwing functions
     -   Getters and setters
     -   Mutating functions
+    -   Static members
 
 ---
 
@@ -29,9 +31,7 @@
 To use **Witness** in your project, add it as a dependency in your `Package.swift` file:
 
 ```swift
-dependencies: [
-    .package(url: "https://github.com/DanielCardonaRojas/ProtocolWitnessMacro.git", from: "0.1.0")
-]
+.package(url: "https://github.com/DanielCardonaRojas/swift-witness", from: "0.1.0")
 ```
 
 Then, import the package in your Swift files:
@@ -159,9 +159,11 @@ For more reading, check out this article:
 | Associated Types         | ✅          |             |
 | Subscripts               | ✅          |             |
 | Async/Await              | ✅          |             |
+| Throwing Functions       | ✅          |             |
 | Getters/Setters          | ✅          |             |
 | Mutating Functions       | ✅          |             |
-| Implicit `self` Mapping  | ✅          |             |
+| Implicit `self` Mapping    | ✅          |             |
+| Static members           | ✅          |             |
 
 ### Implicit `self` Mapping
 
