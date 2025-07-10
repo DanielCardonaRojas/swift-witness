@@ -581,7 +581,7 @@ final class WitnessedTests: XCTestCase {
                   let witness: PropertyServiceWitness
                   var value: Int {
                       get {
-                          return witness.value(context)
+                          witness.value(context)
                       }
                   }
               }

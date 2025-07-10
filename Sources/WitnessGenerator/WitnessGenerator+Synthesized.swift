@@ -206,7 +206,7 @@ extension WitnessGenerator {
         let getter = AccessorDeclSyntax(
             accessorSpecifier: .keyword(.get),
             body: CodeBlockSyntax(statements: CodeBlockItemListSyntax {
-                CodeBlockItemSyntax(stringLiteral: "return witness.\(propertyName)(context)")
+                CodeBlockItemSyntax(stringLiteral: "witness.\(propertyName)(context)")
             })
         )
 
