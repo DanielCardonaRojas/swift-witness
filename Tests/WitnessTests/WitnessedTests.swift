@@ -37,7 +37,7 @@ final class WitnessedTests: XCTestCase {
               let price: (A, String) async throws -> Int
               struct Synthesized: PricingService {
                   let context: A
-                  let witness: PricingServiceWitness<A>
+                  let witness: PricingServiceWitness
                   func price(_ item: String) async throws -> Int {
                       let newValue = try await witness.price(context, item)
                       return newValue
@@ -545,7 +545,7 @@ final class WitnessedTests: XCTestCase {
               let fetchFromCache: (A) throws -> Data
               struct Synthesized: DataService {
                   let context: A
-                  let witness: DataServiceWitness<A>
+                  let witness: DataServiceWitness
                   func fetch() async throws -> Data {
                       let newValue = try await witness.fetch(context)
                       return newValue
@@ -578,7 +578,7 @@ final class WitnessedTests: XCTestCase {
               let value: (A) -> Int
               struct Synthesized: PropertyService {
                   let context: A
-                  let witness: PropertyServiceWitness<A>
+                  let witness: PropertyServiceWitness
                   var value: Int {
                       get {
                           return witness.value(context)

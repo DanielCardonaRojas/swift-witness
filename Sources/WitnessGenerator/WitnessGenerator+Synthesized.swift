@@ -52,12 +52,7 @@ extension WitnessGenerator {
                         pattern: IdentifierPatternSyntax(identifier: .identifier("witness")),
                         typeAnnotation: TypeAnnotationSyntax(
                             type: IdentifierTypeSyntax(
-                                name: .identifier(witnessStructName),
-                                genericArgumentClause: GenericArgumentClauseSyntax(
-                                    arguments: GenericArgumentListSyntax {
-                                        GenericArgumentSyntax(argument: IdentifierTypeSyntax(name: .identifier(genericLabel)))
-                                    }
-                                )
+                                name: .identifier(witnessStructName)
                             )
                         )
                     )
