@@ -560,4 +560,34 @@ final class WitnessedTests: XCTestCase {
         }
     }
 
+    func testSynthesizedWithVariable() {
+        assertMacro {
+            """
+            @Witnessed([.synthesizedConformance])
+            protocol PropertyService {
+                var value: Int { get }
+            }
+            """
+        } expansion: {
+          """
+          protocol PropertyService {
+              var value: Int { get }
+          }
+
+          struct PropertyServiceWitness<A> {
+              let value: (A) -> Int
+              struct Synthesized: PropertyService {
+                  let context: A
+                  let witness: PropertyServiceWitness
+                  var value: Int {
+                      get {
+                          witness.value(context)
+                      }
+                  }
+              }
+          }
+          """
+        }
+    }
+
 }
