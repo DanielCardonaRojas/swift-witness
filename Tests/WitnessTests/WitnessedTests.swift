@@ -587,4 +587,45 @@ final class WitnessedTests: XCTestCase {
         }
     }
 
+    func testRequirementWithConstrainedGeneric() {
+        assertMacro {
+            """
+            @Witnessed
+            protocol AnalyticsProtocol: Sendable {
+                func logEvent<E: Identifiable>(_ event: E)
+            }
+            """
+        } expansion: {
+          """
+          protocol AnalyticsProtocol: Sendable {
+              func logEvent<E: Identifiable>(_ event: E)
+          }
+
+          struct AnalyticsProtocolWitness<A> {
+              let logEvent: (A, any Identifiable) -> Void
+          }
+          """
+        }
+    }
+    func testRequirementWithComposedGenericConstraint() {
+        assertMacro {
+            """
+            @Witnessed
+            protocol AnalyticsProtocol: Sendable {
+                func logEvent<E: Identifiable & Codable>(_ event: E)
+            }
+            """
+        } expansion: {
+          """
+          protocol AnalyticsProtocol: Sendable {
+              func logEvent<E: Identifiable & Codable>(_ event: E)
+          }
+
+          struct AnalyticsProtocolWitness<A> {
+              let logEvent: (A, any Identifiable & Codable) -> Void
+          }
+          """
+        }
+    }
+
 }

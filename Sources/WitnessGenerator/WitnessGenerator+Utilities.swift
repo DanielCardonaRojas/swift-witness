@@ -67,14 +67,14 @@ extension WitnessGenerator {
     )
   }
 
-  static func replaceSelf(typeSyntax: TypeSyntaxProtocol) -> TypeSyntaxProtocol {
+  static func replaceSelf(typeSyntax: TypeSyntaxProtocol) -> TypeSyntax {
     if let syntax = typeSyntax.as(IdentifierTypeSyntax.self), syntax.name.text == TokenSyntax.keyword(.Self).text {
-      return IdentifierTypeSyntax(
+      return TypeSyntax(IdentifierTypeSyntax(
         name: TokenSyntax(stringLiteral: Self.genericLabel)
-      )
+      ))
     }
 
-    return typeSyntax
+    return TypeSyntax(typeSyntax)
   }
 
   static func comment(_ string: String) -> MissingDeclSyntax {
