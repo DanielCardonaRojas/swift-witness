@@ -164,6 +164,7 @@ For more reading, check out this article:
 | Mutating Functions       | ✅          |             |
 | Implicit `self` Mapping    | ✅          |             |
 | Static members           | ✅          |             |
+| Functions with generics  | ✅          |             |
 
 ### Implicit `self` Mapping
 
@@ -174,6 +175,29 @@ Here, the `self` parameter in the `toggle()` method is mapped to the `inout A` p
 ---
 
 ## 📚 Other Examples
+
+### `AnalyticsProtocol`
+
+```swift
+@Witnessed
+protocol AnalyticsProtocol: Sendable {
+    func logEvent<E: Identifiable>(_ event: E)
+}
+```
+
+<details> <summary>Generated Code</summary>
+
+```swift
+protocol AnalyticsProtocol: Sendable {
+    func logEvent<E: Identifiable>(_ event: E)
+}
+
+struct AnalyticsProtocolWitness<A> {
+    let logEvent: (A, any Identifiable) -> Void
+}
+```
+
+</details>
 
 ### `RandomNumberGenerator`
 

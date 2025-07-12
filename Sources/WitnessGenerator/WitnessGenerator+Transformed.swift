@@ -539,7 +539,7 @@ extension WitnessGenerator {
       //    - If generics are only in parameters => contravariant
       //    - If generics are only in return => covariant
       //    - Otherwise (e.g., none used at all) => invariant
-      let parameterAndReturnIntersection = genericsInParams.intersection(genericsInReturn)
+      let _ = genericsInParams.intersection(genericsInReturn)
       var variances = Set<Variance>()
 
       if !genericsInReturn.isEmpty {

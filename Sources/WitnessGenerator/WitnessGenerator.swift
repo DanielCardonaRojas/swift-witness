@@ -283,7 +283,28 @@ public enum WitnessGenerator {
 
   /// The type of the property created when de-protocolizing a protocol function  requirement
   static func functionRequirementWitnessType(_ functionDecl: FunctionDeclSyntax) -> FunctionTypeSyntax  {
-    FunctionTypeSyntax(
+    let funcGenerics = functionDecl.genericParameterClause?.parameters
+
+    class GenericReplacer: SyntaxRewriter {
+        let generics: GenericParameterListSyntax?
+        init(generics: GenericParameterListSyntax?) {
+            self.generics = generics
+        }
+        override func visit(_ node: IdentifierTypeSyntax) -> TypeSyntax {
+            if let generics, let genericParam = generics.first(where: { $0.name.text == node.name.text }) {
+                if let constraint = genericParam.inheritedType {
+                    return TypeSyntax(stringLiteral: "any \(constraint.trimmedDescription)")
+                } else {
+                    return TypeSyntax("Any")
+                }
+            }
+            return super.visit(node)
+        }
+    }
+
+    let rewriter = GenericReplacer(generics: funcGenerics)
+
+    return FunctionTypeSyntax(
       parameters: TupleTypeElementListSyntax(itemsBuilder: {
         // Convert mutating to inout
         if functionDecl.modifiers.contains(where: { $0.name.text == TokenSyntax.keyword(.mutating).text}) {
@@ -300,13 +321,14 @@ public enum WitnessGenerator {
           if let identifierType = parameter.type.as(IdentifierTypeSyntax.self), identifierType.name.text == "Self" {
             selfTupleTypeElement()
           } else {
-            TupleTypeElementSyntax(type: parameter.type)
+            let newType = TypeSyntax(rewriter.visit(parameter.type)) ?? parameter.type
+            TupleTypeElementSyntax(type: newType)
           }
         }
       }),
       effectSpecifiers: functionDecl.signature.effectSpecifiers?.typeEffectSpecifiers(),
       returnClause: ReturnClauseSyntax(
-        type: Self.replaceSelf(typeSyntax: functionDecl.signature.returnClause?.type ?? TypeSyntax(stringLiteral: "Void"))
+        type: TypeSyntax(rewriter.visit(Self.replaceSelf(typeSyntax: functionDecl.signature.returnClause?.type ?? TypeSyntax(stringLiteral: "Void")))) ?? TypeSyntax(stringLiteral: "Void")
       )
     )
   }
