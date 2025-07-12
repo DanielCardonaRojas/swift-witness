@@ -39,8 +39,7 @@ final class WitnessedTests: XCTestCase {
                   let context: A
                   let witness: PricingServiceWitness
                   func price(_ item: String) async throws -> Int {
-                      let newValue = try await witness.price(context, item)
-                      return newValue
+                      try await witness.price(context, item)
                   }
               }
           }
@@ -547,12 +546,10 @@ final class WitnessedTests: XCTestCase {
                   let context: A
                   let witness: DataServiceWitness
                   func fetch() async throws -> Data {
-                      let newValue = try await witness.fetch(context)
-                      return newValue
+                      try await witness.fetch(context)
                   }
                   func fetchFromCache() throws -> Data {
-                      let newValue = try witness.fetchFromCache(context)
-                      return newValue
+                      try witness.fetchFromCache(context)
                   }
               }
           }
