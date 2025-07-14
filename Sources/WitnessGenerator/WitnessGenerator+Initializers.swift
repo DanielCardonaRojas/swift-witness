@@ -133,11 +133,11 @@ extension WitnessGenerator {
               GenericRequirementSyntax(
                 requirement: .sameTypeRequirement(
                   .init(
-                    leftType: IdentifierTypeSyntax(
+                    leftType: .init(IdentifierTypeSyntax(
                       name: .identifier("\(Self.genericLabel).\(associatedType.name.text)")
-                    ),
+                    )),
                     equal: .binaryOperator("=="),
-                    rightType: IdentifierTypeSyntax(name: associatedType.name)
+                    rightType: .init(IdentifierTypeSyntax(name: associatedType.name))
                   )
                 )
               )
