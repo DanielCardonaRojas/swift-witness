@@ -25,8 +25,8 @@ public struct LookedUp<WitnessType> {
     /// If a witness is not found, the program will terminate with a `fatalError`.
     ///
     /// - Parameter strategy: The registration strategy label to use for the lookup. Defaults to "default".
-    public init(strategy: String = "default") {
-        self.strategy = strategy
+    public init(strategy: String? = nil) {
+        self.strategy = strategy ?? "default"
         let parsedType = MetatypeParser.parse(WitnessType.self)
         let innerGeneric = parsedType.genericArguments[0].name
         guard let witness = WitnessLookUpTable<WitnessType>().witness(for: "\(innerGeneric)", label: strategy) else {

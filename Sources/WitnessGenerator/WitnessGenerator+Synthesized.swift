@@ -50,13 +50,13 @@ extension WitnessGenerator {
                 bindings: [
                     PatternBindingSyntax(
                         pattern: IdentifierPatternSyntax(identifier: .identifier("strategy")),
-                        typeAnnotation: TypeAnnotationSyntax(type: IdentifierTypeSyntax(name: .identifier("String")))
+                        typeAnnotation: TypeAnnotationSyntax(type: OptionalTypeSyntax(wrappedType: IdentifierTypeSyntax(name: .identifier("String"))))
                     )
                 ]
             )
 
             MemberBlockItemSyntax(
-                decl: try InitializerDeclSyntax("\(raw: accessLevelPrefix)init(context: A, strategy: String = \"default\")") {
+                decl: try InitializerDeclSyntax("\(raw: accessLevelPrefix)init(context: A, strategy: String? = nil)") {
                     "self.context = context"
                     "self.strategy = strategy"
                 }
