@@ -46,7 +46,7 @@ extension WitnessGenerator {
             )
             VariableDeclSyntax(
                 modifiers: accessLevel != nil ? [DeclModifierSyntax(name: .keyword(.public))] : [],
-                bindingSpecifier: .keyword(.let),
+                bindingSpecifier: .keyword(.var),
                 bindings: [
                     PatternBindingSyntax(
                         pattern: IdentifierPatternSyntax(identifier: .identifier("strategy")),
