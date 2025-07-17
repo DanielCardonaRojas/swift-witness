@@ -55,12 +55,14 @@ extension WitnessGenerator {
                 ]
             )
 
-            MemberBlockItemSyntax(
-                decl: try InitializerDeclSyntax("\(raw: accessLevelPrefix)init(context: A, strategy: String? = nil)") {
-                    "self.context = context"
-                    "self.strategy = strategy"
-                }
-            )
+            if accessLevel == DeclModifierSyntax(name: .keyword(.public)) {
+                MemberBlockItemSyntax(
+                    decl: try InitializerDeclSyntax("\(raw: accessLevelPrefix)init(context: A, strategy: String? = nil)") {
+                        "self.context = context"
+                        "self.strategy = strategy"
+                    }
+                )
+            }
 
             for req in requirements {
                 if req.kind == .function {
