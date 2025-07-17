@@ -132,22 +132,34 @@ extension WitnessGenerator {
         let funcSignature = funcDecl.signature.with(\.returnClause, ReturnClauseSyntax(type: newReturnType))
         let accessLevel = accessModifier(protocolDecl)
 
+        var modifiers: [DeclModifierSyntax] = []
+        if let access = accessLevel {
+            modifiers.append(access)
+        }
+        if requirement.static {
+            modifiers.append(DeclModifierSyntax(name: .keyword(.static)))
+        }
+
+        var arguments: [String] = []
+        if !requirement.static {
+            arguments.append("context")
+        }
+        arguments.append(contentsOf: funcDecl.signature.parameterClause.parameters.map { param in
+            param.secondName?.text ?? param.firstName.text
+        })
+        let argumentList = arguments.joined(separator: ", ")
+        let tryKeyword = funcDecl.signature.effectSpecifiers?.throwsClause?.throwsSpecifier != nil ? "try " : ""
+        let awaitKeyword = funcDecl.signature.effectSpecifiers?.asyncSpecifier != nil ? "await " : ""
+        let witnessCall: TokenSyntax = "\(raw: tryKeyword)\(raw: awaitKeyword)witness.\(raw: requirement.name.text)(\(raw: argumentList))"
+
         return FunctionDeclSyntax(
             attributes: funcDecl.attributes,
-            modifiers: accessLevel != nil ? [DeclModifierSyntax(name: .keyword(.public))] : [],
+            modifiers: DeclModifierListSyntax(modifiers),
             name: funcDecl.name,
             genericParameterClause: funcDecl.genericParameterClause,
             signature: funcSignature,
             genericWhereClause: funcDecl.genericWhereClause
         ) {
-            let arguments = ["context"] + funcDecl.signature.parameterClause.parameters.map { param in
-                param.secondName?.text ?? param.firstName.text
-            }
-            let argumentList = arguments.joined(separator: ", ")
-            let tryKeyword = funcDecl.signature.effectSpecifiers?.throwsClause?.throwsSpecifier != nil ? "try " : ""
-            let awaitKeyword = funcDecl.signature.effectSpecifiers?.asyncSpecifier != nil ? "await " : ""
-            let witnessCall: TokenSyntax = "\(raw: tryKeyword)\(raw: awaitKeyword)witness.\(raw: requirement.name.text)(\(raw: argumentList))"
-
             if returnType.description.contains("Self") {
                 "let newValue = \(raw: witnessCall)"
                 "return .init(context: newValue, witness: witness)"
@@ -203,15 +215,30 @@ extension WitnessGenerator {
         let propertyName = requirement.name.text
         let accessLevel = accessModifier(protocolDecl)
 
+        let getterBody: String
+        if requirement.static {
+            getterBody = "witness.\(propertyName)()"
+        } else {
+            getterBody = "witness.\(propertyName)(context)"
+        }
+
         let getter = AccessorDeclSyntax(
             accessorSpecifier: .keyword(.get),
             body: CodeBlockSyntax(statements: CodeBlockItemListSyntax {
-                CodeBlockItemSyntax(stringLiteral: "witness.\(propertyName)(context)")
+                CodeBlockItemSyntax(stringLiteral: getterBody)
             })
         )
 
+        var modifiers: [DeclModifierSyntax] = []
+        if let access = accessLevel {
+            modifiers.append(access)
+        }
+        if requirement.static {
+            modifiers.append(DeclModifierSyntax(name: .keyword(.static)))
+        }
+
         return VariableDeclSyntax(
-            modifiers: accessLevel != nil ? [.init(name: .keyword(.public))] : [],
+            modifiers: DeclModifierListSyntax(modifiers),
             bindingSpecifier: .keyword(.var),
             bindings: [
                 PatternBindingSyntax(
