@@ -30,7 +30,7 @@ public struct LookedUp<WitnessType> {
         let parsedType = MetatypeParser.parse(WitnessType.self)
         let innerGeneric = parsedType.genericArguments[0].name
         guard let witness = WitnessLookUpTable<WitnessType>().witness(for: "\(innerGeneric)", label: strategy) else {
-            fatalError("Witness \(WitnessType.self) is not registered for strategy: \(strategy)")
+            fatalError("Witness \(WitnessType.self) is not registered for strategy: \(self.strategy)")
         }
         self.wrappedValue = witness
     }
