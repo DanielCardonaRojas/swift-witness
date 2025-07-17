@@ -37,9 +37,10 @@ final class WitnessedTests: XCTestCase {
               let price: (A, String) async throws -> Int
               struct Synthesized: PricingService {
                   let context: A
-                  let witness: PricingServiceWitness
+                  var strategy: String?
                   func price(_ item: String) async throws -> Int {
-                      try await witness.price(context, item)
+                      @LookedUp(strategy: strategy) var witness: PricingServiceWitness
+                      return try await witness.price(context, item)
                   }
               }
           }
@@ -544,12 +545,14 @@ final class WitnessedTests: XCTestCase {
               let fetchFromCache: (A) throws -> Data
               struct Synthesized: DataService {
                   let context: A
-                  let witness: DataServiceWitness
+                  var strategy: String?
                   func fetch() async throws -> Data {
-                      try await witness.fetch(context)
+                      @LookedUp(strategy: strategy) var witness: DataServiceWitness
+                      return try await witness.fetch(context)
                   }
                   func fetchFromCache() throws -> Data {
-                      try witness.fetchFromCache(context)
+                      @LookedUp(strategy: strategy) var witness: DataServiceWitness
+                      return try witness.fetchFromCache(context)
                   }
               }
           }
@@ -575,9 +578,10 @@ final class WitnessedTests: XCTestCase {
               let value: (A) -> Int
               struct Synthesized: PropertyService {
                   let context: A
-                  let witness: PropertyServiceWitness
+                  var strategy: String?
                   var value: Int {
                       get {
+                          @LookedUp(strategy: strategy var witness: PropertyServiceWitness
                           witness.value(context)
                       }
                   }
