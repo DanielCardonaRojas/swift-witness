@@ -79,11 +79,21 @@ public enum WitnessGenerator {
       )
     )
 
-    // Conditionally add ErasableWitness conformance to the struct's inheritance clause
+    // Conditionally add ErasableWitness and RecordableMixin conformance
+    var inherited: [String] = []
     if options?.contains(.synthesizedByTableConformance) ?? false {
+        inherited.append("ErasableWitness")
+    }
+    if options?.contains(.synthesizedConformance) ?? false {
+        inherited.append("RecordableMixin")
+    }
+
+    if !inherited.isEmpty {
         structDecl.inheritanceClause = InheritanceClauseSyntax(
             inheritedTypes: InheritedTypeListSyntax {
-                InheritedTypeSyntax(type: IdentifierTypeSyntax(name: .identifier("ErasableWitness")))
+                for typeName in inherited {
+                    InheritedTypeSyntax(type: IdentifierTypeSyntax(name: .identifier(typeName)))
+                }
             }
         )
     }

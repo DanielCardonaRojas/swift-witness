@@ -31,7 +31,7 @@ extension WitnessGenerator {
 
         let requirements = Self.requirements(protocolDecl)
         let accessLevel = accessModifier(protocolDecl)
-        
+        let accessLevelPrefix = accessLevel != nil ? "public " : ""
 
         let memberBlock = try MemberBlockItemListSyntax {
             VariableDeclSyntax(
@@ -46,31 +46,38 @@ extension WitnessGenerator {
             )
             VariableDeclSyntax(
                 modifiers: accessLevel != nil ? [DeclModifierSyntax(name: .keyword(.public))] : [],
-                bindingSpecifier: .keyword(.let),
+                bindingSpecifier: .keyword(.var),
                 bindings: [
                     PatternBindingSyntax(
-                        pattern: IdentifierPatternSyntax(identifier: .identifier("witness")),
-                        typeAnnotation: TypeAnnotationSyntax(
-                            type: IdentifierTypeSyntax(
-                                name: .identifier(witnessStructName)
-                            )
-                        )
+                        pattern: IdentifierPatternSyntax(identifier: .identifier("strategy")),
+                        typeAnnotation: TypeAnnotationSyntax(type: OptionalTypeSyntax(wrappedType: IdentifierTypeSyntax(name: .identifier("String"))))
                     )
                 ]
             )
+
+            if accessLevel == DeclModifierSyntax(name: .keyword(.public)) {
+                MemberBlockItemSyntax(
+                    decl: try InitializerDeclSyntax("\(raw: accessLevelPrefix)init(context: A, strategy: String? = nil)") {
+                        "self.context = context"
+                        "self.strategy = strategy"
+                    }
+                )
+            }
 
             for req in requirements {
                 if req.kind == .function {
                     try generateMethod(
                         for: req,
                         protocolDecl: protocolDecl,
-                        synthesizedStructName: "Synthesized"
+                        synthesizedStructName: "Synthesized",
+                        witnessStructName: witnessStructName
                     )
                 } else if req.kind == .variable {
                     try generateComputedProperty(
                         for: req,
                         protocolDecl: protocolDecl,
-                        synthesizedStructName: "Synthesized"
+                        synthesizedStructName: "Synthesized",
+                        witnessStructName: witnessStructName
                     )
                 }
             }
@@ -86,25 +93,11 @@ extension WitnessGenerator {
         )
     }
 
-    /// Generates a method implementation for the `Synthesized` struct.
-    ///
-    /// The generated method forwards the call to the corresponding closure on the `witness`
-    /// property, passing the `context` as the first argument.
-    ///
-    /// For a protocol method:
-    /// ```swift
-    /// func price(_ item: String) -> Int
-    /// ```
-    /// This generates the following implementation within the `Synthesized` struct:
-    /// ```swift
-    /// func price(_ item: String) -> Int {
-    ///     witness.price(context, item)
-    /// }
-    /// ```
     private static func generateMethod(
         for requirement: (name: TokenSyntax, static: Bool, kind: RequirementKind, parameters: [FunctionParameterSyntax]),
         protocolDecl: ProtocolDeclSyntax,
-        synthesizedStructName: String
+        synthesizedStructName: String,
+        witnessStructName: String
     ) throws -> FunctionDeclSyntax {
 
         guard let funcDecl = protocolDecl.memberBlock.members
@@ -132,50 +125,51 @@ extension WitnessGenerator {
         let funcSignature = funcDecl.signature.with(\.returnClause, ReturnClauseSyntax(type: newReturnType))
         let accessLevel = accessModifier(protocolDecl)
 
+        var modifiers: [DeclModifierSyntax] = []
+        if let access = accessLevel {
+            modifiers.append(access)
+        }
+        if requirement.static {
+            modifiers.append(DeclModifierSyntax(name: .keyword(.static)))
+        }
+
+        var arguments: [String] = []
+        if !requirement.static {
+            arguments.append("context")
+        }
+        arguments.append(contentsOf: funcDecl.signature.parameterClause.parameters.map { param in
+            param.secondName?.text ?? param.firstName.text
+        })
+        let argumentList = arguments.joined(separator: ", ")
+        let tryKeyword = funcDecl.signature.effectSpecifiers?.throwsClause?.throwsSpecifier != nil ? "try " : ""
+        let awaitKeyword = funcDecl.signature.effectSpecifiers?.asyncSpecifier != nil ? "await " : ""
+        
         return FunctionDeclSyntax(
             attributes: funcDecl.attributes,
-            modifiers: accessLevel != nil ? [DeclModifierSyntax(name: .keyword(.public))] : [],
+            modifiers: DeclModifierListSyntax(modifiers),
             name: funcDecl.name,
             genericParameterClause: funcDecl.genericParameterClause,
             signature: funcSignature,
             genericWhereClause: funcDecl.genericWhereClause
         ) {
-            let arguments = ["context"] + funcDecl.signature.parameterClause.parameters.map { param in
-                param.secondName?.text ?? param.firstName.text
-            }
-            let argumentList = arguments.joined(separator: ", ")
-            let tryKeyword = funcDecl.signature.effectSpecifiers?.throwsClause?.throwsSpecifier != nil ? "try " : ""
-            let awaitKeyword = funcDecl.signature.effectSpecifiers?.asyncSpecifier != nil ? "await " : ""
-            let witnessCall: TokenSyntax = "\(raw: tryKeyword)\(raw: awaitKeyword)witness.\(raw: requirement.name.text)(\(raw: argumentList))"
 
+            let strategyParam = requirement.static ? "\"static\"" : "strategy"
+            "@LookedUp(strategy: \(raw: strategyParam)) var witness: \(raw: witnessStructName)"
+            let witnessCall: TokenSyntax = "return \(raw: tryKeyword)\(raw: awaitKeyword)witness.\(raw: requirement.name.text)(\(raw: argumentList))"
             if returnType.description.contains("Self") {
                 "let newValue = \(raw: witnessCall)"
-                "return .init(context: newValue, witness: witness)"
+                "return .init(context: newValue, strategy: strategy)"
             } else {
                 "\(raw: witnessCall)"
             }
         }
     }
 
-    /// Generates a computed property implementation for the `Synthesized` struct.
-    ///
-    /// The generated property\'s getter forwards the call to the corresponding closure on the
-    /// `witness` property, passing the `context` as an argument.
-    ///
-    /// For a protocol property:
-    /// ```swift
-    /// var price: Int { get }
-    /// ```
-    /// This generates the following implementation within the `Synthesized` struct:
-    /// ```swift
-    /// var price: Int {
-    ///     witness.price(context)
-    /// }
-    /// ```
     private static func generateComputedProperty(
         for requirement: (name: TokenSyntax, static: Bool, kind: RequirementKind, parameters: [FunctionParameterSyntax]),
         protocolDecl: ProtocolDeclSyntax,
-        synthesizedStructName: String
+        synthesizedStructName: String,
+        witnessStructName: String
     ) throws -> VariableDeclSyntax {
         guard let varDecl = protocolDecl.memberBlock.members
             .compactMap({ $0.decl.as(VariableDeclSyntax.self) })
@@ -203,15 +197,32 @@ extension WitnessGenerator {
         let propertyName = requirement.name.text
         let accessLevel = accessModifier(protocolDecl)
 
+        let getterBody: String
+        if requirement.static {
+            getterBody = "witness.\(propertyName)()"
+        } else {
+            getterBody = "witness.\(propertyName)(context)"
+        }
+        let strategyParam = requirement.static ? "\"static\"" : "strategy"
+
         let getter = AccessorDeclSyntax(
             accessorSpecifier: .keyword(.get),
             body: CodeBlockSyntax(statements: CodeBlockItemListSyntax {
-                CodeBlockItemSyntax(stringLiteral: "witness.\(propertyName)(context)")
+                "@LookedUp(strategy: \(raw: strategyParam) var witness: \(raw: witnessStructName)"
+                CodeBlockItemSyntax(stringLiteral: getterBody)
             })
         )
 
+        var modifiers: [DeclModifierSyntax] = []
+        if let access = accessLevel {
+            modifiers.append(access)
+        }
+        if requirement.static {
+            modifiers.append(DeclModifierSyntax(name: .keyword(.static)))
+        }
+
         return VariableDeclSyntax(
-            modifiers: accessLevel != nil ? [.init(name: .keyword(.public))] : [],
+            modifiers: DeclModifierListSyntax(modifiers),
             bindingSpecifier: .keyword(.var),
             bindings: [
                 PatternBindingSyntax(
@@ -223,3 +234,4 @@ extension WitnessGenerator {
         )
     }
 }
+

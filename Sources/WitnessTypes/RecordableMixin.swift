@@ -9,9 +9,9 @@
 ///
 /// Conforming to `RecordableMixin` allows a witness implementation to easily store itself
 /// so it can be retrieved later using `@LookedUp` or `WitnessLookUpTable`.
-protocol RecordableMixin { }
+public protocol RecordableMixin { }
 
-extension RecordableMixin {
+public extension RecordableMixin {
     /// Registers the conforming instance as a witness for a given strategy.
     ///
     /// This method writes the instance (`self`) into the `WitnessLookUpTable` associated
